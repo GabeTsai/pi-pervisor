@@ -1,0 +1,9 @@
+arm_freq=700
+core_freq=250
+
+arm_64bit=0
+kernel=kernel.img
+kernel_address=0x8000
+
+force_turbo=0
+enable_uart=1

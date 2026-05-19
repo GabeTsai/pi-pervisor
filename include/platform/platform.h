@@ -1,0 +1,4 @@
+#pragma once
+
+#define ARM_CLOCK_RATE 700000000
+#define PERIPHERAL_BASE 0x3F000000

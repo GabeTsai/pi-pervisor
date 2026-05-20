@@ -42,6 +42,8 @@ void UART_Disable(void);
 // returns < 0 on error.
 int UART_Put8(uint8_t c);
 
+#define UART_Send_Char(c) UART_Put8(c)
+
 // returns -1 if no byte, the value otherwise.
 int UART_Get8_Async(void);
 

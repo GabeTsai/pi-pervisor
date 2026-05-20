@@ -1,11 +1,18 @@
 #include "uart.h"
 #include "timer.h"
+#include "printk.h"
+#include "panic.h"
 
-int count = 0;
+volatile int count = 0;
+
 __attribute__((interrupt("IRQ")))
 void interrupt_vector(void) {
     count++;
     TIM_Clear_Pending();
+}
+
+void test_func(void) { 
+    trace("Current count: %d\n", count);
 }
 
 void main(void) {
@@ -15,9 +22,7 @@ void main(void) {
     TIM_Enable_IRQ();
 
     while (1) {
-        UART_Send_String("Current, count: ");
-        UART_Send_Int(count);
-        UART_Send_String("\r\n");
+        test_func();
         TIM_SYS_Delay_Millis(1000);
     }
 }

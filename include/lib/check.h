@@ -14,7 +14,6 @@
     while(1); \
 } while(0)
 
-
 void assert(bool condition, const char *msg);
 #define ASSERT(condition, msg) assert(condition, msg)
 

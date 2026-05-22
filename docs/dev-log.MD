@@ -25,4 +25,8 @@
 
 - **5/22/26** 
     - Ported 140E bootloader over to PiZero2W, can now `rpi-install` .bin programs
-    - 
+        - Weird bug where there was a junk byte in the UART RX when the host was sending the first `PUT_PROG_INFO` 
+        byte in the bootloader protocol, so first 4 bytes read was junk byte + the first 3 bytes of the `PUT_PROG_INFO` opcode
+        - Fix: Pi loader keesp scanning incoming byte stream until it sees the full `PUT_PROG_INFO` opcode from the host, then continues the 
+        boot protocol
+        - Could also flush RX as fix 

@@ -45,7 +45,10 @@ int UART_Put8(uint8_t c);
 #define UART_Send_Char(c) UART_Put8(c)
 
 // returns -1 if no byte, the value otherwise.
+int UART_Get8(void);
 int UART_Get8_Async(void);
+
+#define UART_Get_Char() UART_Get8()
 
 // 0 = no data, 1 = at least one byte
 int UART_Has_Data(void);

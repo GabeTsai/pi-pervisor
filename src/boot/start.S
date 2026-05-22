@@ -64,6 +64,7 @@ clear_bss_done:
     cpsie i
 
     bl main
+    bl clean_reboot
 
 halt: 
     wfe

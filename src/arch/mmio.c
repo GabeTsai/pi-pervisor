@@ -14,6 +14,20 @@ uint32_t GET32(uint32_t location) {
     );
 }
 
+void PUT8(uint32_t location, uint8_t value) {
+    asm volatile (
+        "strb r1, [r0]\n\t"
+        "bx lr\n\t"
+    );
+}
+
+uint8_t GET8(uint32_t location) {
+    asm volatile (
+        "ldrb r0, [r0]\n\t"
+        "bx lr\n\t"
+    );
+}
+
 void put32(volatile uint32_t *addr, uint32_t value) {
     PUT32((uint32_t) addr, value);
 }
@@ -40,4 +54,10 @@ uint32_t OR32(uint32_t addr, uint32_t x) {
 
 uint32_t or32(volatile void *addr, uint32_t x) {
     return OR32((uint32_t) addr, x);
+}
+
+void BRANCHTO(uint32_t addr) {
+    asm volatile (
+        "bx r0"
+    );
 }

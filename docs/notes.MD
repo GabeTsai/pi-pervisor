@@ -301,11 +301,18 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
 - `elr_hyp` - exception link register. When taking an exception to Hyp mode, holds address to return to. 
 
 ### Registers ###
-- HCR - G6-4913
-   - Also called the Hyp Configuration Register. 
+- HCR - G6-4913 - Hyp Configuration Register
    - On ARMv8/Cortex-A53, it is actually mapped to the AArch64 Sys Register HCR_EL2[31:0]. 
    - HCR.SWIO (bit 1 of HCR) means Set/Way Invalidation Override, and controls whether an EL1 cache invalidate-by-set/way operation should behave as safe clean+invalidate when virtualization is involved
       - This choice is architecturally enabled by default on Armv8-A/Cortex 53 so it's always 1
+- HSR - G6-4945 - Hyp Syndrome Register
+   - Holds all the info for any synchronous exception taken to Hyp mode
+   - AArch64 system register ESR_EL2 is mapped to HSR
+   - Provides details of the fault. 
+   - Contains 6-bit Exception class field **EC** - exception cause
+   - Instruction specific syndrome field ISS
+   - The format of the HSR depends on the value of the EC field - see G4-4678 for more details
+   - We read HSR to decode the specific cause of an exception that entered Hyp mode and route to the right hypervisor handling logic.
 ### Instructions ###
 - ERET - F5-3117
 

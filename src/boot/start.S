@@ -101,21 +101,5 @@ _hyp_trap_h:           .word hyp_trap
 _hyp_irq_h:            .word hyp_irq
 _hyp_fiq_h:            .word hyp_fiq
 
-hyp_unknown:
-hyp_undef:
-hyp_prefetch_abort:
-hyp_data_abort:
-hyp_trap:
-hyp_irq:
-hyp_fiq:
-    b hyp_halt
-
-hyp_hvc_from_hyp:
-    b hyp_halt
-
-hyp_halt:
-    wfe
-    b hyp_halt
-
 _reset_:
     b _start

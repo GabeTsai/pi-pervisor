@@ -38,3 +38,5 @@
 - **5/31/26**
     - Modified bootloader and `src/boot/start.S`to boot in Hyp mode, confirmed with basic test
     - Installed basic hyp exception vector table and cleared HCR
+    - Confirmed basic HVC works and is handled properly by HVC handler
+    - TODO: build common exception frame/dispatcher

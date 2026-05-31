@@ -1,6 +1,8 @@
 ARMGNU ?= arm-none-eabi
 ARMCPU ?= cortex-a53
 
+.DEFAULT_GOAL := all
+
 ROOT := ..
 
 ARM_CC      := $(ARMGNU)-gcc
@@ -71,7 +73,7 @@ DEPS := $(PI_OBJS:.o=.d) $(HOST_OBJS:.o=.d)
 
 .PHONY: all image host install-host clean
 
-all: image host
+all: $(PI_IMAGE) $(PI_BIN) $(HOST_BIN)
 
 image: $(PI_IMAGE) $(PI_BIN)
 

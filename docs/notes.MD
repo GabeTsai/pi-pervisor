@@ -300,10 +300,24 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
     - PSTATE for Aarch32, is CPSR
 - `elr_hyp` - exception link register. When taking an exception to Hyp mode, holds address to return to. 
 
-### Useful Pages
+### Registers ###
+- HCR - G6-4913
+   - Also called the Hyp Configuration Register. 
+   - On ARMv8/Cortex-A53, it is actually mapped to the AArch64 Sys Register HCR_EL2[31:0]. 
+   - HCR.SWIO (bit 1 of HCR) means Set/Way Invalidation Override, and controls whether an EL1 cache invalidate-by-set/way operation should behave as safe clean+invalidate when virtualization is involved
+      - This choice is architecturally enabled by default on Armv8-A/Cortex 53 so it's always 1
+### Instructions ###
+- ERET - F5-3117
 
 #### ARMv8 Reference Manual
 - Hyp mode - G1-4326 
-- ERET - F5-3117
 
 #### Cortex A53 TRM
+
+
+### Hypervisor Design
+3 Binaries/layers:
+- Bootloader: fake-OS that lives on SD card, first receiver
+- Src: All the hypervisor code lives on here, and is the second receiver
+- Guest: some tiny OS kernel, for testing payloads
+

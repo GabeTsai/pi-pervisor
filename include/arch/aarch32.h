@@ -4,6 +4,8 @@
 #define IRQ_STACK_TOP 0x6000000
 #define HYP_STACK_TOP 0x4000000
 
+#define HCR_SWIO (1 << 1)
+
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 
@@ -30,9 +32,16 @@ static inline void DSB(void) {
 static inline void DMB(void) {
     asm volatile ("dmb sy" ::: "memory");
 }
+
 static inline uint32_t read_cpsr(void) { 
     uint32_t cpsr;
     asm volatile ("mrs %0, cpsr" : "=r"(cpsr));
     return cpsr;
+}
+
+static inline uint32_t read_hcr(void) { 
+    uint32_t hcr;
+    asm volatile ("mrc p15, 4, %0, c1, c1, 0" : "=r"(hcr));
+    return hcr;
 }
 #endif

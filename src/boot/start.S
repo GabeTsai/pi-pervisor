@@ -16,9 +16,21 @@ _start:
     mrs r0, cpsr
     and r0, r0, #0x1F
     cmp r0, #0x1A
-    beq 1f
+    beq in_hyp
 
     ldr sp, =STACK_ADDR
+    b 1f
+
+in_hyp:
+    ldr sp, =HYP_STACK_TOP
+
+    ldr r0, =_hyp_vector_table
+    mcr p15, 4, r0, c12, c0, 0 @ set HVBAR to hyp vector table
+    isb
+
+    mov r0, #HCR_SWIO
+    mcr p15, 4, r0, c1, c1, 0 @ clear HCR controls, preserving Cortex-A53 RES1 SWIO
+    isb
 
 1:
     ldr r0, =__bss_start__
@@ -67,6 +79,43 @@ _data_abort_vector_h:               .word   data_abort_vector
 _unused_handler_h:                  .word   _reset_
 _interrupt_vector_h:                .word   interrupt_vector
 _fast_interrupt_vector_h:           .word   fast_interrupt_vector
+
+.p2align 5
+.global _hyp_vector_table
+_hyp_vector_table:
+    ldr pc, _hyp_reset_h
+    ldr pc, _hyp_undef_h
+    ldr pc, _hyp_hvc_h
+    ldr pc, _hyp_prefetch_abort_h
+    ldr pc, _hyp_data_abort_h
+    ldr pc, _hyp_trap_h
+    ldr pc, _hyp_irq_h
+    ldr pc, _hyp_fiq_h
+
+_hyp_reset_h:          .word hyp_unknown
+_hyp_undef_h:          .word hyp_undef
+_hyp_hvc_h:            .word hyp_hvc_from_hyp
+_hyp_prefetch_abort_h: .word hyp_prefetch_abort
+_hyp_data_abort_h:     .word hyp_data_abort
+_hyp_trap_h:           .word hyp_trap
+_hyp_irq_h:            .word hyp_irq
+_hyp_fiq_h:            .word hyp_fiq
+
+hyp_unknown:
+hyp_undef:
+hyp_prefetch_abort:
+hyp_data_abort:
+hyp_trap:
+hyp_irq:
+hyp_fiq:
+    b hyp_halt
+
+hyp_hvc_from_hyp:
+    b hyp_halt
+
+hyp_halt:
+    wfe
+    b hyp_halt
 
 _reset_:
     b _start

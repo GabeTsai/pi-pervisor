@@ -4,7 +4,6 @@
 #include "mmio.h"
 #include "boot-mmio.h"
 
-
 void main(void) {
     UART_Init();
     boot_putuint32(GET_PROG_INFO);

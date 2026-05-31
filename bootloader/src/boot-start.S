@@ -15,23 +15,19 @@ skip:
     cmp r0, #0
     bne park_core
 
-    @ leave Hyp mode before running the C bootloader
+    @ If firmware entered us in Hyp mode, set SP_hyp and stay there.
+    @ Otherwise initialize the current-mode stack.
     mrs r0, cpsr
     and r0, r0, #0x1F
     cmp r0, #0x1A
-    bne 1f
-
-    ldr r0, =1f
-    msr elr_hyp, r0
-
-    mov r0, #(0x13 | 0xc0) @ Supervisor mode, IRQ/FIQ masked
-    msr spsr_cxsf, r0
-
-    eret
-
-1:
+    beq set_hyp_stack
     ldr sp, =STACK_ADDR
+    b 2f
 
+set_hyp_stack:
+    ldr sp, =HYP_STACK_TOP
+
+2:
     ldr r0, =__bss_start__
     ldr r1, =__bss_end__
     mov r2, #0

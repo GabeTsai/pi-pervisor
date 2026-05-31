@@ -58,5 +58,6 @@ int UART_Tx_Is_Empty(void);
 void UART_Flush_Tx(void);
 
 void UART_Send_Int(uint32_t num);
+void UART_Send_Hex(uint32_t num);
 void UART_Send_String(const char *msg);
 void UART_Set_Baud_Rate(uint32_t baud_reg);

@@ -130,6 +130,19 @@ void UART_Send_String(const char *msg) {
     }
 }
 
+void UART_Send_Hex(uint32_t num) {
+    UART_Send_String("0x");
+    for (int8_t i = 28; i >= 0; i-= 4) {
+        uint8_t number = num >> i & 0xF;
+        if (number < 10) {
+            UART_Put8('0' + number);
+        }
+        else {
+            UART_Put8('A' + number - 10);
+        }
+    }
+}
+
 void UART_Set_Baud_Rate(uint32_t baud_reg) {
     DSB();
     PUT32(AUX_MU_CNTL_REG, 0); // disable TX/RX while changing baud rate

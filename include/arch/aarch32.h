@@ -2,8 +2,11 @@
 
 #define STACK_ADDR 0x8000000
 #define IRQ_STACK_TOP 0x6000000
+#define HYP_STACK_TOP 0x4000000
 
 #ifndef __ASSEMBLER__
+#include <stdint.h>
+
 typedef enum { 
     PEMODE_USER = 0b0000, 
     PEMODE_FIQ = 0b0001, 
@@ -26,5 +29,10 @@ static inline void DSB(void) {
 
 static inline void DMB(void) {
     asm volatile ("dmb sy" ::: "memory");
+}
+static inline uint32_t read_cpsr(void) { 
+    uint32_t cpsr;
+    asm volatile ("mrs %0, cpsr" : "=r"(cpsr));
+    return cpsr;
 }
 #endif

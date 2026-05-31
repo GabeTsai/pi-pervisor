@@ -11,24 +11,16 @@ _start:
     cmp r0, #0
     bne park_core
 
-    @ if in Hyp mode, leave it 
+    @ If the bootloader handed off in Hyp mode, stay there and keep using
+    @ the active SP_hyp for now. Otherwise initialize the current-mode stack.
     mrs r0, cpsr
     and r0, r0, #0x1F
     cmp r0, #0x1A
-    bne 1f
+    beq 1f
 
-    @ we are in Hyp mode
-    ldr r0, =1f
-    msr elr_hyp, r0
-    
-    mov r0, #(0x13 | 0xc0) @ Supervisor mode, IRQ/FIQ masked
-    msr spsr_cxsf, r0
-    
-    eret @ exit hyp mode with the two values above
-
-1:
     ldr sp, =STACK_ADDR
 
+1:
     ldr r0, =__bss_start__
     ldr r1, =__bss_end__
     mov r2, #0
@@ -48,21 +40,6 @@ clear_bss:
     b clear_bss
 
 clear_bss_done:
-    @ set IRQ stack
-    cps #0x12 @ IRQ mode
-    ldr sp, =IRQ_STACK_TOP
-
-    @ SVC mode
-    cps #0x13
-    
-    @ set VBAR to interrupt table
-    ldr r0, =_interrupt_table
-    mcr p15, 0, r0, c12, c0, 0
-    isb
-
-    @ enable IRQs 
-    cpsie i
-
     bl main
     bl clean_reboot
 

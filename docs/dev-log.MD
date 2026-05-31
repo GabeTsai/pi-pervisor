@@ -10,7 +10,8 @@
 - GPIO interrupts
 - kmalloc + debug allocator (memcheck)
 - SWI syscall harness 
-- Hyp entry + hypercall dispatcher
+
+### Early Hyp Infra
 ### MMU
 ### Multi-Core
 
@@ -30,3 +31,9 @@
         - Fix: Pi loader keesp scanning incoming byte stream until it sees the full `PUT_PROG_INFO` opcode from the host, then continues the 
         boot protocol
         - Could also flush RX as fix 
+
+- **5/23/26 - 5/27/26**
+    - Read up on all the hypervisor infrastructure, took a bunch of notes
+
+- **5/31/26**
+    - Modified bootloader and `src/boot/start.S`to boot in Hyp mode, confirmed with basic test

@@ -9,8 +9,11 @@
 
 # Linker output
 *.ilk
+*.img
+*.list
 *.map
 *.exp
+build/
 
 # Precompiled Headers
 *.gch
@@ -35,6 +38,7 @@
 *.i*86
 *.x86_64
 *.hex
+*.bin
 
 # Debug files
 *.dSYM/

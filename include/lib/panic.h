@@ -2,8 +2,11 @@
 
 #include "printk.h"
 
+#define PANIC_STRINGIFY(x) #x
+#define PANIC_TOSTRING(x) PANIC_STRINGIFY(x)
+
 #define panic(msg, args...) do { \
-    printk("PANIC: " msg " at " __FILE__ ":" __LINE__ "\n", ##args); \
+    printk("PANIC: " msg " at " __FILE__ ":" PANIC_TOSTRING(__LINE__) "\n", ##args); \
     while(1); \
 } while(0)
 

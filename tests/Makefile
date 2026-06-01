@@ -8,14 +8,25 @@ LD      := $(ARMGNU)-gcc
 OBJCOPY := $(ARMGNU)-objcopy
 OBJDUMP := $(ARMGNU)-objdump
 
-# Build tests/foo.c with: make -C tests PROG=foo
-PROG ?= test-boot-handoff
+# Build one test with: make -C tests PROG=foo
+# Build all tests with: make -C tests
+PROG_FROM_CLI := $(filter command line,$(origin PROG))
+PROG ?= test-basic-hvc
 
-BUILD_DIR := build/$(PROG)
-ELF       := $(BUILD_DIR)/$(PROG).elf
-MAP       := $(BUILD_DIR)/$(PROG).map
-LIST      := $(BUILD_DIR)/$(PROG).list
-BIN       := $(PROG).bin
+TESTS := \
+	test-basic-hvc \
+	test-hyp-exceptions \
+	test-hyp-undef \
+	test-hyp-prefetch-abort \
+	test-hyp-data-abort
+
+ifeq ($(PROG_FROM_CLI),command line)
+ACTIVE_TESTS := $(PROG)
+else
+ACTIVE_TESTS := $(TESTS)
+endif
+
+REPO_BUILD_DIR := build/repo
 
 INC_DIRS := \
 	$(ROOT)/include \
@@ -24,9 +35,9 @@ INC_DIRS := \
 	$(ROOT)/include/drivers \
 	$(ROOT)/include/lib
 
-TEST_SRC := $(PROG).c
 REPO_C_SRCS := \
 	$(ROOT)/src/arch/mmio.c \
+	$(ROOT)/src/arch/hyp-exceptions.c \
 	$(ROOT)/src/drivers/gpio.c \
 	$(ROOT)/src/drivers/timer.c \
 	$(ROOT)/src/drivers/uart.c \
@@ -34,13 +45,14 @@ REPO_C_SRCS := \
 	$(ROOT)/src/lib/printk.c \
 	$(ROOT)/src/platform/irq.c \
 	$(ROOT)/src/platform/platform.c
-REPO_S_SRCS := $(ROOT)/src/boot/start.S
+REPO_S_SRCS := \
+	$(ROOT)/src/boot/start.S \
+	$(ROOT)/src/arch/hyp-vectors.S
 
-TEST_OBJ := $(BUILD_DIR)/test/$(PROG).o
-REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(BUILD_DIR)/repo/%.o,$(REPO_C_SRCS))
-REPO_S_OBJS := $(patsubst $(ROOT)/%.S,$(BUILD_DIR)/repo/%.o,$(REPO_S_SRCS))
-OBJS := $(TEST_OBJ) $(REPO_C_OBJS) $(REPO_S_OBJS)
-DEPS := $(OBJS:.o=.d)
+REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(REPO_BUILD_DIR)/%.o,$(REPO_C_SRCS))
+REPO_S_OBJS := $(patsubst $(ROOT)/%.S,$(REPO_BUILD_DIR)/%.o,$(REPO_S_SRCS))
+REPO_OBJS := $(REPO_C_OBJS) $(REPO_S_OBJS)
+DEPS := $(REPO_OBJS:.o=.d)
 
 CPPFLAGS := $(addprefix -I,$(INC_DIRS)) -MMD -MP
 CFLAGS   := -O2 -Wall -Wextra -Wno-unused-parameter -Werror -std=gnu99
@@ -48,29 +60,49 @@ CFLAGS   += -nostdlib -nostartfiles -ffreestanding
 CFLAGS   += -mcpu=$(ARMCPU) -marm -mno-unaligned-access
 ASFLAGS  := $(CFLAGS)
 LDFLAGS  := -T $(ROOT)/linker.ld -nostdlib -nostartfiles -ffreestanding
-LDFLAGS  += -Wl,-Map=$(MAP)
 
-.PHONY: all clean
+.PHONY: all all-tests clean $(ACTIVE_TESTS)
 
-all: $(BIN)
+ifeq ($(PROG_FROM_CLI),command line)
+all: $(PROG).bin
+else
+all: all-tests
+endif
 
-$(BIN): $(ELF)
-	$(OBJCOPY) $< -O binary $@
+all-tests: $(TESTS)
 
-$(ELF): $(OBJS) $(ROOT)/linker.ld
-	@mkdir -p $(@D)
-	$(LD) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@
-	$(OBJDUMP) -D $@ > $(LIST)
+define TEST_RULES
+$(1)_BUILD_DIR := build/tests/$(1)
+$(1)_ELF       := $$($(1)_BUILD_DIR)/$(1).elf
+$(1)_MAP       := $$($(1)_BUILD_DIR)/$(1).map
+$(1)_LIST      := $$($(1)_BUILD_DIR)/$(1).list
+$(1)_TEST_OBJ  := $$($(1)_BUILD_DIR)/test/$(1).o
+$(1)_OBJS      := $$($(1)_TEST_OBJ) $$(REPO_OBJS)
 
-$(TEST_OBJ): $(TEST_SRC)
+$(1): $(1).bin
+
+$(1).bin: $$($(1)_ELF)
+	$$(OBJCOPY) $$< -O binary $$@
+
+$$($(1)_ELF): $$($(1)_OBJS) $$(ROOT)/linker.ld
+	@mkdir -p $$(@D)
+	$$(LD) $$(CFLAGS) $$($(1)_OBJS) $$(LDFLAGS) -Wl,-Map=$$($(1)_MAP) -o $$@
+	$$(OBJDUMP) -D $$@ > $$($(1)_LIST)
+
+$$($(1)_TEST_OBJ): $(1).c
+	@mkdir -p $$(@D)
+	$$(CC) $$(CPPFLAGS) $$(CFLAGS) -c $$< -o $$@
+
+DEPS += $$($(1)_TEST_OBJ:.o=.d)
+endef
+
+$(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
+
+$(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/repo/%.o: $(ROOT)/%.c
-	@mkdir -p $(@D)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/repo/%.o: $(ROOT)/%.S
+$(REPO_BUILD_DIR)/%.o: $(ROOT)/%.S
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 

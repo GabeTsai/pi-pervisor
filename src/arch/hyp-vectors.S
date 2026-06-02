@@ -1,5 +1,6 @@
 #include "aarch32.h"
 #include "hyp-exceptions-layout.h"
+#include "hyp-exceptions-layout.h"
 
 .section ".text"
 
@@ -72,6 +73,9 @@ hyp_except_entry_alloc_frame:
     mrc p15, 4, r1, c5, c2, 0 @ read HSR 
     str r1, [sp, #HYP_STATE_HSR]
 
+    mrc p15, 4, r1, c5, c2, 0 @ read HSR 
+    str r1, [sp, #HYP_STATE_HSR]
+
     mrs r1, elr_hyp
     str r1, [sp, #HYP_STATE_ELR_HYP]
 
@@ -92,7 +96,29 @@ hyp_except_entry_alloc_frame:
 
     cmp r0, #HYP_ACTION_RETURN
     bne hyp_halt
+    str r1, [sp, #HYP_STATE_ELR_HYP]
 
+    mrs r1, spsr_hyp
+    str r1, [sp, #HYP_STATE_SPSR_HYP]
+
+    mrc p15, 4, r1, c6, c0, 0 @ read HDFAR
+    str r1, [sp, #HYP_STATE_HDFAR]
+
+    mrc p15, 4, r1, c6, c0, 2 @ read HIFAR
+    str r1, [sp, #HYP_STATE_HIFAR]
+
+    mrc p15, 4, r1, c6, c0, 4 @ read HPFAR
+    str r1, [sp, #HYP_STATE_HPFAR]
+
+    mov r0, sp
+    bl hyp_handle_exception
+
+    cmp r0, #HYP_ACTION_RETURN
+    bne hyp_halt
+
+    ldmia sp, {r0-r12}
+    ldr lr, [sp, #HYP_STATE_LR]
+    add sp, sp, #HYP_STATE_SIZE @ deallocate frame
     ldmia sp, {r0-r12}
     ldr lr, [sp, #HYP_STATE_LR]
     add sp, sp, #HYP_STATE_SIZE @ deallocate frame

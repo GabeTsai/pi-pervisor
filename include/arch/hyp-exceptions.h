@@ -51,5 +51,4 @@ HypExceptAction handle_trap(HypExceptState *hyp_state);
 HypExceptAction handle_irq(HypExceptState *hyp_state);
 HypExceptAction handle_fiq(HypExceptState *hyp_state);
 
-
 #endif

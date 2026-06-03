@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define HSR_EC_SHIFT 26
 #define HSR_EC_MASK  0x3f
 #define HSR_EC(hsr)  (((hsr) >> HSR_EC_SHIFT) & HSR_EC_MASK)
@@ -34,3 +36,13 @@ enum {
     HSR_EC_DATA_ABORT_LOWER              = 0b100100,
     HSR_EC_DATA_ABORT_SAME               = 0b100101,
 };
+
+static inline uint32_t read_hcr(void) { 
+    uint32_t hcr;
+    asm volatile ("mrc p15, 4, %0, c1, c1, 0" : "=r"(hcr));
+    return hcr;
+}
+
+static inline uint32_t hsr_iss_imm16(uint32_t hsr) { 
+    return HSR_ISS(hsr) & 0xffff;
+}

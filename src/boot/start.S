@@ -88,7 +88,7 @@ _hyp_vector_table:
     ldr pc, _hyp_hvc_h
     ldr pc, _hyp_prefetch_abort_h
     ldr pc, _hyp_data_abort_h
-    ldr pc, _hyp_trap_h
+    ldr pc, _hyp_lower_sync_h
     ldr pc, _hyp_irq_h
     ldr pc, _hyp_fiq_h
 
@@ -97,7 +97,7 @@ _hyp_undef_h:          .word hyp_undef
 _hyp_hvc_h:            .word hyp_hvc_from_hyp
 _hyp_prefetch_abort_h: .word hyp_prefetch_abort
 _hyp_data_abort_h:     .word hyp_data_abort
-_hyp_trap_h:           .word hyp_trap
+_hyp_lower_sync_h:     .word hyp_lower_sync
 _hyp_irq_h:            .word hyp_irq
 _hyp_fiq_h:            .word hyp_fiq
 

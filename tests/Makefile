@@ -18,7 +18,8 @@ TESTS := \
 	test-hyp-exceptions \
 	test-hyp-undef \
 	test-hyp-prefetch-abort \
-	test-hyp-data-abort
+	test-hyp-data-abort \
+	test-hyp-enter-lower 
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -47,7 +48,8 @@ REPO_C_SRCS := \
 	$(ROOT)/src/platform/platform.c
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
-	$(ROOT)/src/arch/hyp-vectors.S
+	$(ROOT)/src/arch/hyp-vectors.S \
+	$(ROOT)/src/arch/hyp-enter-lower.S
 
 REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(REPO_BUILD_DIR)/%.o,$(REPO_C_SRCS))
 REPO_S_OBJS := $(patsubst $(ROOT)/%.S,$(REPO_BUILD_DIR)/%.o,$(REPO_S_SRCS))
@@ -77,7 +79,7 @@ $(1)_ELF       := $$($(1)_BUILD_DIR)/$(1).elf
 $(1)_MAP       := $$($(1)_BUILD_DIR)/$(1).map
 $(1)_LIST      := $$($(1)_BUILD_DIR)/$(1).list
 $(1)_TEST_OBJ  := $$($(1)_BUILD_DIR)/test/$(1).o
-$(1)_OBJS      := $$($(1)_TEST_OBJ) $$(REPO_OBJS)
+$(1)_OBJS      := $$($(1)_TEST_OBJ) $$(TEST_EXTRA_OBJS_$(1)) $$(REPO_OBJS)
 
 $(1): $(1).bin
 
@@ -96,7 +98,14 @@ $$($(1)_TEST_OBJ): $(1).c
 DEPS += $$($(1)_TEST_OBJ:.o=.d)
 endef
 
+TEST_EXTRA_OBJS_test-hyp-enter-lower := \
+	build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o
+
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
+
+build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-lower.S
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)

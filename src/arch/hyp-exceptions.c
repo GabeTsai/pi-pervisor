@@ -4,6 +4,8 @@
 #include "hyp-regs.h"
 #include "check.h" 
 #include "panic.h"
+#include "lower-hvc-test.h"
+#include "aarch32.h"
 
 const int verbose = 1;
 
@@ -90,7 +92,8 @@ static const uint64_t valid_hsr_ec[] = {
         EC_BIT(HSR_EC_DATA_ABORT_LOWER) |
         EC_BIT(HSR_EC_DATA_ABORT_SAME),
 
-    [HYP_EXCEPTION_TRAP] =
+    [HYP_EXCEPTION_LOWER_SYNC] =
+        EC_BIT(HSR_EC_HVC_A32) |
         EC_BIT(HSR_EC_WFI_WFE) |
         EC_BIT(HSR_EC_CP15_MCR_MRC) |
         EC_BIT(HSR_EC_CP15_MCRR_MRRC) |
@@ -120,8 +123,8 @@ HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) {
             return handle_prefetch_abort(hyp_state);
         case HYP_EXCEPTION_DATA_ABORT:
             return handle_data_abort(hyp_state);
-        case HYP_EXCEPTION_TRAP:
-            return handle_trap(hyp_state);
+        case HYP_EXCEPTION_LOWER_SYNC:
+            return handle_lower_sync(hyp_state);
         case HYP_EXCEPTION_IRQ:
             return handle_irq(hyp_state);
         case HYP_EXCEPTION_FIQ:
@@ -140,13 +143,39 @@ HypExceptAction handle_hvc_from_hyp(HypExceptState *hyp_state) {
     return HYP_ACTION_RETURN;
 }
 
+HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) { 
+    trace("HVC from lower level mode\n");
+    assert(HSR_EC(hyp_state->hsr) == HSR_EC_HVC_A32, "expected lower-mode HVC");
+    assert((hyp_state->spsr_hyp & CPSR_PEMODE_MASK) == CPSR_PEMODE_SVC, "expected SVC mode");
+    assert(hyp_state->r[2] == 0x12345678, "expected test value");
+    
+    switch (hyp_state->r[0]) {
+        case LOWER_HVC_TEST_PING:
+            assert(hsr_iss_imm16(hyp_state->hsr) == LOWER_HVC_TEST_PING_IMM, "bad HVC immediate");
+            trace("lower HVC saved CPSR: %p\n", hyp_state->r[1]);
+            hyp_state->r[0] = LOWER_HVC_TEST_RETURN_MAGIC;
+            return HYP_ACTION_RETURN;
+        case LOWER_HVC_TEST_PASS:
+            trace("lower HVC test passed\n");
+            return HYP_ACTION_HALT;
+        case LOWER_HVC_TEST_FAIL:
+            trace("lower HVC test failed\n");
+            hyp_dump_exception_state(hyp_state);
+            return HYP_ACTION_HALT;
+        default:
+            trace("unknown lower HVC test event: %p\n", hyp_state->r[0]);
+            hyp_dump_exception_state(hyp_state);
+            return HYP_ACTION_HALT;
+    }
+    
+}
+
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 
     trace("Undefined instruction in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_UNDEF_INSTR), "HSR EC mismatch");
     hyp_dump_exception_state(hyp_state);
     return HYP_ACTION_HALT;
 }
-
 
 HypExceptAction handle_unknown(HypExceptState *hyp_state) { 
     trace("Unknown exception in Hyp\n");
@@ -169,11 +198,18 @@ HypExceptAction handle_data_abort(HypExceptState *hyp_state) {
     return HYP_ACTION_HALT;
 }
 
-HypExceptAction handle_trap(HypExceptState *hyp_state) { 
+HypExceptAction handle_lower_sync(HypExceptState *hyp_state) { 
     trace("Trap in Hyp\n");
-    assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_TRAP), "HSR EC invalid");
-    hyp_dump_exception_state(hyp_state);
-    return HYP_ACTION_HALT;
+    assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_LOWER_SYNC), "HSR EC invalid");
+    switch (HSR_EC(hyp_state->hsr)) { 
+        case HSR_EC_HVC_A32: 
+            return handle_hvc_from_lower(hyp_state);
+        case HSR_EC_WFI_WFE:
+        case HSR_EC_CP15_MCR_MRC:
+        default:
+            hyp_dump_exception_state(hyp_state);
+            return HYP_ACTION_HALT;
+    }
 }
 
 // this is temporary, not doing IRQs rn

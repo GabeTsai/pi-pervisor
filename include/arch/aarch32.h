@@ -6,20 +6,25 @@
 
 #define HCR_SWIO (1 << 1)
 
+#define CPSR_PEMODE_MASK 0x1F
+
+#define CPSR_PEMODE_USR 0x10
+#define CPSR_PEMODE_FIQ 0x11
+#define CPSR_PEMODE_IRQ 0x12
+#define CPSR_PEMODE_SVC 0x13
+#define CPSR_PEMODE_MON 0x16
+#define CPSR_PEMODE_ABT 0x17
+#define CPSR_PEMODE_HYP 0x1A
+#define CPSR_PEMODE_UND 0x1B
+#define CPSR_PEMODE_SYS 0x1F
+
+#define CPSR_T (1u << 5) // Thumb mode
+#define CPSR_F (1u << 6) // FIQ mask
+#define CPSR_I (1u << 7) // IRQ mask
+#define CPSR_A (1u << 8) // software error mask
+
 #ifndef __ASSEMBLER__
 #include <stdint.h>
-
-typedef enum { 
-    PEMODE_USER = 0b0000, 
-    PEMODE_FIQ = 0b0001, 
-    PEMODE_IRQ = 0b0010, 
-    PEMODE_SUPERVISOR = 0b0011, 
-    PEMODE_MONITOR = 0b0110, 
-    PEMODE_ABORT = 0b0111, 
-    PE_MODE_HYP = 0b1010, 
-    PE_MODE_UNDEFINED = 0b1011,
-    PE_MODE_SYSTEM = 0b1111,
-} PEModeT;
 
 static inline void ISB(void) {
     asm volatile ("isb sy" ::: "memory");
@@ -39,9 +44,4 @@ static inline uint32_t read_cpsr(void) {
     return cpsr;
 }
 
-static inline uint32_t read_hcr(void) { 
-    uint32_t hcr;
-    asm volatile ("mrc p15, 4, %0, c1, c1, 0" : "=r"(hcr));
-    return hcr;
-}
 #endif

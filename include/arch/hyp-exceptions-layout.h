@@ -20,6 +20,6 @@
 #define HYP_EXCEPTION_HVC_FROM_HYP   2
 #define HYP_EXCEPTION_PREFETCH_ABORT 3
 #define HYP_EXCEPTION_DATA_ABORT     4
-#define HYP_EXCEPTION_TRAP           5
+#define HYP_EXCEPTION_LOWER_SYNC     5
 #define HYP_EXCEPTION_IRQ            6
 #define HYP_EXCEPTION_FIQ            7

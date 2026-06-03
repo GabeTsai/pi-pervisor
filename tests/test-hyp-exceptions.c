@@ -62,7 +62,7 @@ void main(void)
              HSR_FOR_EC(HSR_EC_DATA_ABORT_SAME),
              HYP_ACTION_HALT);
 
-    run_case("trap", HYP_EXCEPTION_TRAP,
+    run_case("lower sync", HYP_EXCEPTION_LOWER_SYNC,
              HSR_FOR_EC(HSR_EC_CP15_MCR_MRC),
              HYP_ACTION_HALT);
 

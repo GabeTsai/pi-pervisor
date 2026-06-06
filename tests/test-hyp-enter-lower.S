@@ -1,5 +1,5 @@
 #include "aarch32.h"
-#include "hypercall.h"
+#include "hv/hypercall.h"
 .section ".text"
 
 .global lower_entry

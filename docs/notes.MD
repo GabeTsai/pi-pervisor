@@ -332,3 +332,8 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
 - Src: All the hypervisor code lives on here, and is the second receiver
 - Guest: some tiny OS kernel, for testing payloads
 
+**Linux KVM** - open-source Linux ARM hypervisor, and **Arm SMCCC** (Secure Monitor Call Calling Convention):
+- KVM defines a "version" which is the rulebook that the guest and hypervisor use for hypercalls. (How should EL2 and EL1 interact when EL1 executes HVC)
+   - Includes things like which registers arguments/hypercall number goes into, which reg is return value, which registers are clobbered/preserved
+- ARM SMCCC explicitly use an immediate of 0 for `HVC` so we'll follow that. In general, ARM firmware ABIS also just put the function ID/args in regs and keep the immediate zero, which kkind of makes sense - the a pain to access compared to registers.  
+

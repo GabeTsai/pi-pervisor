@@ -19,7 +19,8 @@ TESTS := \
 	test-hyp-undef \
 	test-hyp-prefetch-abort \
 	test-hyp-data-abort \
-	test-hyp-enter-lower 
+	test-hyp-enter-lower \
+	test-basic-guest-hvc \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -51,7 +52,8 @@ REPO_C_SRCS := \
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
-	$(ROOT)/src/arch/hyp-enter-lower.S
+	$(ROOT)/src/arch/hyp-enter-lower.S \
+	$(ROOT)/src/guest/hypercall.S
 
 REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(REPO_BUILD_DIR)/%.o,$(REPO_C_SRCS))
 REPO_S_OBJS := $(patsubst $(ROOT)/%.S,$(REPO_BUILD_DIR)/%.o,$(REPO_S_SRCS))
@@ -103,9 +105,16 @@ endef
 TEST_EXTRA_OBJS_test-hyp-enter-lower := \
 	build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o
 
+TEST_EXTRA_OBJS_test-basic-guest-hvc := \
+	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o
+
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
 build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-lower.S
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
+build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o: test-basic-guest-hvc.S
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 

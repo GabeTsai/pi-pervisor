@@ -58,16 +58,15 @@
     - Kind of a janky test format, will cleanup asap
 
 - **6/5/26**
-    - More formal Hypercall infra, inspired by Linux KVM - open-source Linux ARM hypervisor, and Arm SMCCC (SEcure Monitor Call Calling Convention):
-        - KVM defines a "version" which is the rulebook that the guest and hypervisor use for hypercalls. (How should EL2 and EL1 interact when EL1 executes HVC)
-            - Includes things like which registers arguments/hypercall number goes into, which reg is return value, which registers are clobbered/preserved
-        - For now, our Hypercall ABI version works like this:
-            - Entry:
-                - r0 - hypercall number
-                - r1-r3 - args 0-2
-            - Return:
-                - r0 - return value / error
-                - r1 - r3 - optional output values 
-            - r4-r11 preserved (for simplicity, we'll just use 3 args. can expand later)
-            - ARM SMCCC explicitly use an immediate of 0 for `HVC` so we'll follow that. In general, ARM firmware ABIS also just put the function ID/args in regs and keep the immediate zero, which kkind of makes sense - the a pain to access compared to registers.  
-            
+    - More formal Hypercall ABI version, inspired by Linux KVM and Arm SMCCC:
+        - Entry:
+            - r0 - hypercall number
+            - r1-r3 - args 0-2
+        - Return:
+            - r0 - return value / error
+            - r1 - r3 - optional output values 
+        - r4-r11 preserved (for simplicity, we'll just use 3 args. can expand later)
+        - HVC #0
+    - Added skeletal guest infra: 
+        - We basically do the same test as described above, but from Hyp mode, we enter EL1 (guest), set the stack from the enter_lower, then in the guest:
+            - Repeatedly execute hypercalls that trap to EL2, where EL2 handles the hypercall and `ERET`s back to EL1. 

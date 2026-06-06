@@ -34,7 +34,8 @@ INC_DIRS := \
 	$(ROOT)/include/arch \
 	$(ROOT)/include/platform \
 	$(ROOT)/include/drivers \
-	$(ROOT)/include/lib
+	$(ROOT)/include/lib \
+	$(ROOT)/include/hv
 
 REPO_C_SRCS := \
 	$(ROOT)/src/arch/mmio.c \
@@ -45,7 +46,8 @@ REPO_C_SRCS := \
 	$(ROOT)/src/lib/check.c \
 	$(ROOT)/src/lib/printk.c \
 	$(ROOT)/src/platform/irq.c \
-	$(ROOT)/src/platform/platform.c
+	$(ROOT)/src/platform/platform.c \
+	$(ROOT)/src/hv/hypercall.c
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \

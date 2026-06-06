@@ -1,6 +1,5 @@
 #include "aarch32.h"
-#include "lower-hvc-test.h"
-
+#include "hypercall.h"
 .section ".text"
 
 .global lower_entry
@@ -9,30 +8,23 @@ lower_entry:
     mov sp, r0
 
     @ HVC to enter Hyp mode from SVC
-    mov r0, #LOWER_HVC_TEST_PING
-    mrs r1, cpsr @ CPSR, or PSTATE should be accessible from spsr_hyp when in hyp mode
+    mov r0, #HYPERCALL_GET_ABI_VERSION
+    hvc #HYPERCALL_HVC_IMM
 
-    ldr r2, =0x12345678
-    push {r2}
-    mov r2, #0
-    pop {r2}
-
-    hvc #LOWER_HVC_TEST_PING_IMM
-
-    @ Hyp handler returns known value
-    ldr r1, =LOWER_HVC_TEST_RETURN_MAGIC
-    cmp r0, r1
+    cmp r0, #HYPERCALL_ABI_VERSION
     bne failure
 
 pass:
-    mov r0, #LOWER_HVC_TEST_PASS
-    hvc #0
-    b pass 
+    mov r0, #HYPERCALL_EXIT
+    mov r1, #HYP_GUEST_EXIT_SUCCESS
+    hvc #HYPERCALL_HVC_IMM
+    bl clean_reboot
 
 failure:
-    mov r0, #LOWER_HVC_TEST_FAIL
-    hvc #0
-    b failure
+    mov r0, #HYPERCALL_EXIT
+    mov r1, #HYP_GUEST_EXIT_FAILURE
+    hvc #HYPERCALL_HVC_IMM
+    bl clean_reboot
 
 .section ".bss"
 

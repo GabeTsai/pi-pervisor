@@ -10,7 +10,7 @@ hyp_enter_lower_mode:
     @ r1 = lower-mode stack top
     @ r2 = CPSR value to restore into lower mode
     msr elr_hyp, r0
-    msr spsr_hyp, r2 @ restore CPSR from SPSR_hyp
+    msr spsr_hyp, r2 @ copy PSTATE (cpsr) into spsr_hyp  
     mov r0, r1 @ copy stack top to r0
     eret
 

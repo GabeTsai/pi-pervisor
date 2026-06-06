@@ -2,9 +2,9 @@
 #include "hyp-exceptions.h"
 #include "printk.h"
 #include "hyp-regs.h"
+#include "hypercall.h"
 #include "check.h" 
 #include "panic.h"
-#include "lower-hvc-test.h"
 #include "aarch32.h"
 
 const int verbose = 1;
@@ -146,28 +146,8 @@ HypExceptAction handle_hvc_from_hyp(HypExceptState *hyp_state) {
 HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) { 
     trace("HVC from lower level mode\n");
     assert(HSR_EC(hyp_state->hsr) == HSR_EC_HVC_A32, "expected lower-mode HVC");
-    assert((hyp_state->spsr_hyp & CPSR_PEMODE_MASK) == CPSR_PEMODE_SVC, "expected SVC mode");
-    assert(hyp_state->r[2] == 0x12345678, "expected test value");
-    
-    switch (hyp_state->r[0]) {
-        case LOWER_HVC_TEST_PING:
-            assert(hsr_iss_imm16(hyp_state->hsr) == LOWER_HVC_TEST_PING_IMM, "bad HVC immediate");
-            trace("lower HVC saved CPSR: %p\n", hyp_state->r[1]);
-            hyp_state->r[0] = LOWER_HVC_TEST_RETURN_MAGIC;
-            return HYP_ACTION_RETURN;
-        case LOWER_HVC_TEST_PASS:
-            trace("lower HVC test passed\n");
-            return HYP_ACTION_HALT;
-        case LOWER_HVC_TEST_FAIL:
-            trace("lower HVC test failed\n");
-            hyp_dump_exception_state(hyp_state);
-            return HYP_ACTION_HALT;
-        default:
-            trace("unknown lower HVC test event: %p\n", hyp_state->r[0]);
-            hyp_dump_exception_state(hyp_state);
-            return HYP_ACTION_HALT;
-    }
-    
+    assert(hsr_iss_imm16(hyp_state->hsr) == HYPERCALL_HVC_IMM, "bad HVC immediate");
+    return hyp_handle_guest_hypercall(hyp_state);
 }
 
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 

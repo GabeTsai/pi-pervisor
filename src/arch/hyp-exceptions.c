@@ -7,7 +7,7 @@
 #include "panic.h"
 #include "aarch32.h"
 
-static const int verbose = 0;
+bool hyp_verbose = false;
 
 static const char *hsr_ec_name(uint32_t ec) {
     switch (ec) {
@@ -55,16 +55,14 @@ static const char *hsr_ec_name(uint32_t ec) {
 void hyp_dump_exception_state(HypExceptState *hyp_state) { 
     trace("-------- HYP EXCEPTION STATE --------\n");
     trace("EXCEPTION TYPE: %d\n", hyp_state->exception_type);
-    if (verbose) { 
-        trace("HSR: %p\n", hyp_state->hsr);
-        trace("HSR EC: %d (%s)\n", HSR_EC(hyp_state->hsr), hsr_ec_name(HSR_EC(hyp_state->hsr)));
-        trace("HSR ISS: %p\n", HSR_ISS(hyp_state->hsr));
-        trace("ELR_HYP: %p\n", hyp_state->elr_hyp);
-        trace("SPSR_HYP: %b\n", hyp_state->spsr_hyp);
-        trace("HDFAR: %p\n", hyp_state->hdfar);
-        trace("HIFAR: %p\n", hyp_state->hifar);
-        trace("HPFAR: %p\n", hyp_state->hpfar);
-    } 
+    trace("HSR: %p\n", hyp_state->hsr);
+    trace("HSR EC: %d (%s)\n", HSR_EC(hyp_state->hsr), hsr_ec_name(HSR_EC(hyp_state->hsr)));
+    trace("HSR ISS: %p\n", HSR_ISS(hyp_state->hsr));
+    trace("ELR_HYP: %p\n", hyp_state->elr_hyp);
+    trace("SPSR_HYP: %b\n", hyp_state->spsr_hyp);
+    trace("HDFAR: %p\n", hyp_state->hdfar);
+    trace("HIFAR: %p\n", hyp_state->hifar);
+    trace("HPFAR: %p\n", hyp_state->hpfar);
     trace("-------------------------------------\n\n");
 }
 
@@ -107,8 +105,14 @@ bool hsr_ec_valid(uint32_t hsr, HypExceptType except_type) {
     return (valid_hsr_ec[except_type] & EC_BIT(hsr_ec)) != 0;
 }
 
+static bool is_guest_hvc(HypExceptState *hyp_state) {
+    return hyp_state->exception_type == HYP_EXCEPTION_LOWER_SYNC &&
+           HSR_EC(hyp_state->hsr) == HSR_EC_HVC_A32 &&
+           hsr_iss_imm16(hyp_state->hsr) == HYPERCALL_HVC_IMM;
+}
+
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) { 
-    if (verbose) { 
+    if (hyp_verbose || !is_guest_hvc(hyp_state)) {
         hyp_dump_exception_state(hyp_state);
     }
     switch (hyp_state->exception_type) { 
@@ -129,63 +133,48 @@ HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) {
         case HYP_EXCEPTION_FIQ:
             return handle_fiq(hyp_state);
         default:
+            trace("Unknown Hyp exception type\n");
             return HYP_ACTION_HALT;
     }
 }
 
 HypExceptAction handle_hvc_from_hyp(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("HVC from Hyp\n");
-    }
+    trace("HVC from Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_HVC_FROM_HYP), "HSR EC mismatch");
     return HYP_ACTION_RETURN;
 }
 
 HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("HVC from lower level mode\n");
-    }
     assert(HSR_EC(hyp_state->hsr) == HSR_EC_HVC_A32, "expected lower-mode HVC");
     assert(hsr_iss_imm16(hyp_state->hsr) == HYPERCALL_HVC_IMM, "bad HVC immediate");
     return hyp_handle_guest_hypercall(hyp_state);
 }
 
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Undefined instruction in Hyp\n");
-    }
+    trace("Undefined instruction in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_UNDEF_INSTR), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_unknown(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Unknown exception in Hyp\n");
-    }
+    trace("Unknown exception in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_UNKNOWN), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_prefetch_abort(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Prefetch abort in Hyp\n");
-    }
+    trace("Prefetch abort in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_PREFETCH_ABORT), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_data_abort(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Data abort in Hyp\n");
-    }
+    trace("Data abort in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_DATA_ABORT), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_lower_sync(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Trap in Hyp\n");
-    }
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_LOWER_SYNC), "HSR EC invalid");
     switch (HSR_EC(hyp_state->hsr)) { 
         case HSR_EC_HVC_A32: 
@@ -193,22 +182,19 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
         case HSR_EC_WFI_WFE:
         case HSR_EC_CP15_MCR_MRC:
         default:
+            trace("Unhandled lower-level trap in Hyp\n");
             return HYP_ACTION_HALT;
     }
 }
 
 // this is temporary, not doing IRQs rn
 HypExceptAction handle_irq(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Unexpected IRQ taken to Hyp\n");
-    }
+    trace("Unexpected IRQ taken to Hyp\n");
     return HYP_ACTION_HALT;
 }
 
 // probably won't do fiqs for this project
 HypExceptAction handle_fiq(HypExceptState *hyp_state) { 
-    if (verbose) { 
-        trace("Unexpected FIQ taken to Hyp\n");
-    }
+    trace("Unexpected FIQ taken to Hyp\n");
     return HYP_ACTION_HALT;
 }

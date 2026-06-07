@@ -40,6 +40,8 @@ _Static_assert(sizeof(HypExceptState) == HYP_STATE_SIZE, "HypExceptState size mi
 void hyp_dump_exception_state(HypExceptState *hyp_state);
 bool hsr_ec_valid(uint32_t hsr, HypExceptType except_type);
 
+extern bool hyp_verbose;
+
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state);
 
 HypExceptAction handle_unknown(HypExceptState *hyp_state);

@@ -337,3 +337,13 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
    - Includes things like which registers arguments/hypercall number goes into, which reg is return value, which registers are clobbered/preserved
 - ARM SMCCC explicitly use an immediate of 0 for `HVC` so we'll follow that. In general, ARM firmware ABIS also just put the function ID/args in regs and keep the immediate zero, which kkind of makes sense - the a pain to access compared to registers.  
 
+#### Virtual IRQ controller model
+- Armv8-A supports virtual interrupts, but not necessarily a built-in generic virtual interrupt controller in the core. We still need things like interrupt IDs, priorities, masking for IRQs, etc. 
+- For this repo, we use two bitmaps: one that tracks pending virqs, and another that tracks active virqs. 
+- The hypervisor needs:
+   - A way to record that a virtual IRQ is pending for a vCPU
+   - A way to assert that there is an IRQ on the guest-visible IRQ line
+   - A way to clear that IRQ line when there are no pending virtual IRQs left
+- The guest needs:
+   - A way to find out which virtual IRQ triggered its IRQ handler
+   - A way to let the hypervisor know that it is done processing the IRQ so the appropriate bitmaps can be cleared 

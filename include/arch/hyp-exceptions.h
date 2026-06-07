@@ -42,6 +42,8 @@ bool hsr_ec_valid(uint32_t hsr, HypExceptType except_type);
 
 extern bool hyp_verbose;
 
+uint32_t hyp_get_irq_count(void);
+
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state);
 
 HypExceptAction handle_unknown(HypExceptState *hyp_state);

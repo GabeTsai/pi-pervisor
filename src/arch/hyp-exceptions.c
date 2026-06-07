@@ -3,11 +3,18 @@
 #include "printk.h"
 #include "hyp-regs.h"
 #include "hv/hypercall.h"
+#include "hv/virq.h"
 #include "check.h" 
 #include "panic.h"
 #include "aarch32.h"
+#include "timer.h"
 
 bool hyp_verbose = false;
+static volatile uint32_t counter = 0;
+
+uint32_t hyp_get_irq_count(void) {
+    return counter;
+}
 
 static const char *hsr_ec_name(uint32_t ec) {
     switch (ec) {
@@ -111,8 +118,12 @@ static bool is_guest_hvc(HypExceptState *hyp_state) {
            hsr_iss_imm16(hyp_state->hsr) == HYPERCALL_HVC_IMM;
 }
 
+static bool is_timer_irq(HypExceptState *hyp_state) {
+    return hyp_state->exception_type == HYP_EXCEPTION_IRQ && TIM_Check_IRQ();
+}
+
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) { 
-    if (hyp_verbose || !is_guest_hvc(hyp_state)) {
+    if (hyp_verbose || (!is_guest_hvc(hyp_state) && !is_timer_irq(hyp_state))) {
         hyp_dump_exception_state(hyp_state);
     }
     switch (hyp_state->exception_type) { 
@@ -187,8 +198,19 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
     }
 }
 
-// this is temporary, not doing IRQs rn
 HypExceptAction handle_irq(HypExceptState *hyp_state) { 
+    if (TIM_Check_IRQ()) {
+        TIM_Clear_Pending();
+        
+        int res = hv_virq_raise_current(&virq_controller, VIRQ_TIMER);
+        if (res != 0 && res != HV_VIRQ_ERR_BUSY) { 
+            trace("Failed to raise timer VIRQ: %d\n", res);
+            return HYP_ACTION_HALT;
+        }
+
+        return HYP_ACTION_RETURN;
+
+    }
     trace("Unexpected IRQ taken to Hyp\n");
     return HYP_ACTION_HALT;
 }

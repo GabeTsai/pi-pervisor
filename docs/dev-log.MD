@@ -78,3 +78,22 @@
         - Then, it manually copies those bytes into the physical address where guest linked. 
         - Does the same typical EL2 to EL1 communication pathway as described above
     - Removed previous raw guest/hyp HVC API test that didn't link guest binary onto main test image. 
+    - Added putchar hypercall that the guest can call 
+    - Started work on virtual interrupts. 
+    - First test:
+        - Hyp configures timer interrupts, and sets HCR_IMO so IRQs are taken to Hyp instead of EL1. The guest code repeatedly checks IRQ count with a custom hypercall, and exits when the count reaches a certain value. 
+        - All the IRQs are running on the Hyp mode's timer for now.
+    - Added foundational virq infra, simple bitmask pending/active based scheduling model. see `notes.MD` for more details on the model. 
+        - Hyp side - virq.h/virq.c, additional logic to route interrupts to guests,  mark them as active, pending, and done based on guest hypercalls
+        - Guest side - new hypercalls to request interrupt/signal interrupt finished to hypervisor
+    - Second test:
+        - Exercises full guest infra again, but this time with a new guest-virq-image.bin to copy into the test image, and infra/viq-testing binary (setup irq stack through the guest linker)
+        - New guest main now has a custom guest irq handler and a basic timer test
+    - TODOs: 
+        - harden current VIRQ Path and add more tests to cover cases like guest trying to claim a VIRQ when there are no pending ones. 
+        - Create a more robust scheduler API
+        - Stage 1/Stage 2 MMU experiments
+        - Data-abort/fault handling
+        - multi-guest with cooperative scheduling
+    - STRETCH:
+        - Timer-based round robin scheduling

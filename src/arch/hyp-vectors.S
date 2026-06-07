@@ -92,7 +92,14 @@ hyp_except_entry_alloc_frame:
 
     cmp r0, #HYP_ACTION_RETURN
     bne hyp_halt
-    str r1, [sp, #HYP_STATE_ELR_HYP]
+    
+    @ If C changed hyp_state->elr_hyp or hyp_state->spsr_hyp,
+    @ commit those changes before ERET.
+    ldr r1, [sp, #HYP_STATE_ELR_HYP]
+    msr elr_hyp, r1
+
+    ldr r1, [sp, #HYP_STATE_SPSR_HYP]
+    msr spsr_hyp, r1
 
     ldmia sp, {r0-r12}
     ldr lr, [sp, #HYP_STATE_LR]

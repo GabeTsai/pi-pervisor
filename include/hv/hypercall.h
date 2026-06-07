@@ -11,6 +11,7 @@
 #define HYPERCALL_SUCCESS 0
 #define HYPERCALL_ERR_UNKNOWN -1
 #define HYPERCALL_ERR_INVALID -2
+#define HYPERCALL_ERR_NO_PENDING -3
 
 // bit masks that indicate all supported hypervisor features
 #define HYP_FEATURE_BASE  (1 << 0)
@@ -23,7 +24,10 @@
 #define HYPERCALL_GET_FEATURES    1
 #define HYPERCALL_EXIT            2
 #define HYPERCALL_YIELD           3
-#define HYPERCALL_PUTCHAR         4
+#define HYPERCALL_PUTCHAR           4
+#define HYPERCALL_GET_HYP_IRQ_COUNT 5
+#define HYPERCALL_VIRQ_CLAIM        6
+#define HYPERCALL_VIRQ_COMPLETE     7
 
 // guest exit statuses passed from guest to hypervisor
 #define HYP_GUEST_EXIT_SUCCESS 0

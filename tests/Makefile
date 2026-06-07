@@ -20,8 +20,10 @@ TESTS := \
 	test-hyp-prefetch-abort \
 	test-hyp-data-abort \
 	test-hyp-enter-lower \
+	test-hyp-irq \
 	test-basic-guest-hvc \
 	test-guest-image \
+	test-guest-virq-image \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -42,6 +44,7 @@ INC_DIRS := \
 
 REPO_C_SRCS := \
 	$(ROOT)/src/arch/mmio.c \
+	$(ROOT)/src/arch/hyp-regs.c \
 	$(ROOT)/src/arch/hyp-exceptions.c \
 	$(ROOT)/src/drivers/gpio.c \
 	$(ROOT)/src/drivers/timer.c \
@@ -50,7 +53,8 @@ REPO_C_SRCS := \
 	$(ROOT)/src/lib/printk.c \
 	$(ROOT)/src/platform/irq.c \
 	$(ROOT)/src/platform/platform.c \
-	$(ROOT)/src/hv/hypercall.c
+	$(ROOT)/src/hv/hypercall.c \
+	$(ROOT)/src/hv/virq.c
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
@@ -107,12 +111,18 @@ endef
 TEST_EXTRA_OBJS_test-hyp-enter-lower := \
 	build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o
 
+TEST_EXTRA_OBJS_test-hyp-irq := \
+	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o
+
 TEST_EXTRA_OBJS_test-basic-guest-hvc := \
 	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o \
 	build/tests/test-basic-guest-hvc/guest/main.o
 
 TEST_EXTRA_OBJS_test-guest-image := \
 	build/tests/test-guest-image/test/test-guest-image.S.o
+
+TEST_EXTRA_OBJS_test-guest-virq-image := \
+	build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o
 
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
@@ -132,8 +142,15 @@ build/tests/test-guest-image/test/test-guest-image.S.o: test-guest-image.S $(ROO
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
+build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o: test-guest-virq-image.S $(ROOT)/guests/guest-virq.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
 $(ROOT)/guests/guest.bin: FORCE
-	$(MAKE) -C $(ROOT)/guests ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+	$(MAKE) -C $(ROOT)/guests guest.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-virq.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-virq.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)

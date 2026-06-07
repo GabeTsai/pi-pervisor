@@ -6,12 +6,13 @@ OBJCOPY := $(ARMGNU)-objcopy
 OBJDUMP := $(ARMGNU)-objdump
 
 BUILD_DIR := build
-TARGET := guest
+TARGETS := guest guest-virq
 
-SRCS := start.S main.c lib/guest_hypercall.S
-OBJS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(filter %.c,$(SRCS)))
-OBJS += $(patsubst %.S,$(BUILD_DIR)/%.o,$(filter %.S,$(SRCS)))
-DEPS := $(OBJS:.o=.d)
+COMMON_SRCS := start.S guest-vectors.S lib/guest_hypercall.S
+COMMON_OBJS := $(patsubst %.S,$(BUILD_DIR)/%.o,$(COMMON_SRCS))
+GUEST_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/main.o
+GUEST_VIRQ_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/virq-main.o
+DEPS := $(GUEST_OBJS:.o=.d) $(GUEST_VIRQ_OBJS:.o=.d)
 
 CPPFLAGS := -I../include -I../include/arch -I../include/hv -Ilib -MMD -MP
 CFLAGS := -O2 -Wall -Wextra -Werror -ffreestanding -nostdlib -nostartfiles
@@ -20,14 +21,21 @@ LDFLAGS := -T linker.ld -nostdlib -nostartfiles -ffreestanding
 
 .PHONY: all clean
 
-all: $(TARGET).bin
+all: $(TARGETS:%=%.bin)
 
-$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
+guest.bin: $(BUILD_DIR)/guest.elf
 	$(OBJCOPY) $< -O binary $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJS) linker.ld
-	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map -o $@
-	$(OBJDUMP) -D $@ > $(BUILD_DIR)/$(TARGET).list
+guest-virq.bin: $(BUILD_DIR)/guest-virq.elf
+	$(OBJCOPY) $< -O binary $@
+
+$(BUILD_DIR)/guest.elf: $(GUEST_OBJS) linker.ld
+	$(CC) $(CFLAGS) $(GUEST_OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/guest.map -o $@
+	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest.list
+
+$(BUILD_DIR)/guest-virq.elf: $(GUEST_VIRQ_OBJS) linker.ld
+	$(CC) $(CFLAGS) $(GUEST_VIRQ_OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/guest-virq.map -o $@
+	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest-virq.list
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(@D)
@@ -38,6 +46,6 @@ $(BUILD_DIR)/%.o: %.S
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET).bin
+	rm -rf $(BUILD_DIR) $(TARGETS:%=%.bin)
 
 -include $(DEPS)

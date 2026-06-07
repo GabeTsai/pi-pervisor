@@ -4,8 +4,6 @@
 #define IRQ_STACK_TOP 0x6000000
 #define HYP_STACK_TOP 0x4000000
 
-#define HCR_SWIO (1 << 1)
-
 #define CPSR_PEMODE_MASK 0x1F
 
 #define CPSR_PEMODE_USR 0x10
@@ -42,6 +40,22 @@ static inline uint32_t read_cpsr(void) {
     uint32_t cpsr;
     asm volatile ("mrs %0, cpsr" : "=r"(cpsr));
     return cpsr;
+}
+
+static inline void write_cpsr(uint32_t value) {
+    asm volatile ("msr cpsr, %0" : : "r"(value));
+}
+
+static inline void clear_cpsr_bit(uint32_t mask) {
+    uint32_t cpsr = read_cpsr();
+    cpsr &= ~mask;
+    write_cpsr(cpsr);
+}
+
+static inline void set_cpsr_bit(uint32_t mask) {
+    uint32_t cpsr = read_cpsr();
+    cpsr |= mask;
+    write_cpsr(cpsr);
 }
 
 #endif

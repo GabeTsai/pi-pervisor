@@ -1,4 +1,5 @@
 #include "aarch32.h"
+#include "hyp-regs.h"
 
 .section ".text.boot"
 

@@ -22,3 +22,13 @@ static inline void guest_exit(uint32_t status) {
     guest_hypercall1(HYPERCALL_EXIT, status);
     while (1) {}
 }
+
+static inline void guest_putchar(uint8_t c) {
+    guest_hypercall1(HYPERCALL_PUTCHAR, (uint32_t)c);
+}
+
+static inline void guest_puts(const char *s) { 
+    while (*s) {
+        guest_putchar(*s++);
+    }
+}

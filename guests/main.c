@@ -2,6 +2,8 @@
 
 void guest_main(void)
 {
+    guest_puts("hello from guest\n");
+    
     if (guest_get_abi_version() != HYPERCALL_ABI_VERSION) {
         guest_exit(HYP_GUEST_EXIT_FAILURE);
     }

@@ -1,6 +1,7 @@
 #include "hv/hypercall.h"
 #include "panic.h"
 #include "platform.h"
+#include "uart.h"
 
 HypExceptAction hyp_handle_guest_hypercall(HypExceptState *s) { 
     switch (s->r[0]) { 
@@ -15,6 +16,10 @@ HypExceptAction hyp_handle_guest_hypercall(HypExceptState *s) {
         clean_reboot();
         return HYP_ACTION_HALT;
     case HYPERCALL_YIELD:
+        s->r[0] = HYPERCALL_SUCCESS;
+        return HYP_ACTION_RETURN;
+    case HYPERCALL_PUTCHAR:
+        UART_Put8(s->r[1]);
         s->r[0] = HYPERCALL_SUCCESS;
         return HYP_ACTION_RETURN;
     default:

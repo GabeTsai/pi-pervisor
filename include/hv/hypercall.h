@@ -23,6 +23,7 @@
 #define HYPERCALL_GET_FEATURES    1
 #define HYPERCALL_EXIT            2
 #define HYPERCALL_YIELD           3
+#define HYPERCALL_PUTCHAR         4
 
 // guest exit statuses passed from guest to hypervisor
 #define HYP_GUEST_EXIT_SUCCESS 0

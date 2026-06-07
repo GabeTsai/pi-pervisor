@@ -8,7 +8,8 @@ guest_lower_entry:
     mov sp, r0
     bl guest_main
 
-    @ if we get here, something went wrong, exit with HVC guest failure 
+    @ guest_main should terminate through guest_exit().
+    @ Returning here means the guest test failed.
     mov r0, #HYPERCALL_EXIT
     mov r1, #HYP_GUEST_EXIT_FAILURE
     hvc #HYPERCALL_HVC_IMM

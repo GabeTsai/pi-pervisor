@@ -2,7 +2,7 @@
 #include "hyp-exceptions.h"
 #include "printk.h"
 #include "hyp-regs.h"
-#include "hypercall.h"
+#include "hv/hypercall.h"
 #include "check.h" 
 #include "panic.h"
 #include "aarch32.h"

@@ -70,3 +70,11 @@
     - Added skeletal guest infra: 
         - We basically do the same test as described above, but from Hyp mode, we enter EL1 (guest), set the stack from the enter_lower, then in the guest:
             - Repeatedly execute hypercalls that trap to EL2, where EL2 handles the hypercall and `ERET`s back to EL1. 
+    - TODO: add actual guest main, start.S and linker script and a test for those, as well as guest binary execution
+
+- **6/6/26**
+    - Added formal guest infra in a separate directory (main, start.S, linker script that sets up stack and start/end of guest code), and a basic test that exercises the standalone guest image/load path: 
+        - The test takes the guest code (`guest.bin`) and sticks it into the test image as raw bytes.
+        - Then, it manually copies those bytes into the physical address where guest linked. 
+        - Does the same typical EL2 to EL1 communication pathway as described above
+    - Removed previous raw guest/hyp HVC API test that didn't link guest binary onto main test image. 

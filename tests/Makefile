@@ -21,6 +21,7 @@ TESTS := \
 	test-hyp-data-abort \
 	test-hyp-enter-lower \
 	test-basic-guest-hvc \
+	test-guest-image \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -36,7 +37,8 @@ INC_DIRS := \
 	$(ROOT)/include/platform \
 	$(ROOT)/include/drivers \
 	$(ROOT)/include/lib \
-	$(ROOT)/include/hv
+	$(ROOT)/include/hv \
+	$(ROOT)/guests/lib
 
 REPO_C_SRCS := \
 	$(ROOT)/src/arch/mmio.c \
@@ -53,7 +55,7 @@ REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
 	$(ROOT)/src/arch/hyp-enter-lower.S \
-	$(ROOT)/src/guest/hypercall.S
+	$(ROOT)/guests/lib/guest_hypercall.S
 
 REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(REPO_BUILD_DIR)/%.o,$(REPO_C_SRCS))
 REPO_S_OBJS := $(patsubst $(ROOT)/%.S,$(REPO_BUILD_DIR)/%.o,$(REPO_S_SRCS))
@@ -106,7 +108,11 @@ TEST_EXTRA_OBJS_test-hyp-enter-lower := \
 	build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o
 
 TEST_EXTRA_OBJS_test-basic-guest-hvc := \
-	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o
+	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o \
+	build/tests/test-basic-guest-hvc/guest/main.o
+
+TEST_EXTRA_OBJS_test-guest-image := \
+	build/tests/test-guest-image/test/test-guest-image.S.o
 
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
@@ -117,6 +123,17 @@ build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-l
 build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o: test-basic-guest-hvc.S
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
+build/tests/test-basic-guest-hvc/guest/main.o: $(ROOT)/guests/main.c
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+build/tests/test-guest-image/test/test-guest-image.S.o: test-guest-image.S $(ROOT)/guests/guest.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
+$(ROOT)/guests/guest.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)
@@ -130,3 +147,6 @@ clean:
 	rm -rf build *.bin
 
 -include $(DEPS)
+
+.PHONY: FORCE
+FORCE:

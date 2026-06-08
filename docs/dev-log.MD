@@ -97,3 +97,13 @@
         - multi-guest with cooperative scheduling
     - STRETCH:
         - Timer-based round robin scheduling
+    
+- **6/7/26**
+    - Added ARM generic timer driver
+        - Hyp now owns the generic timer and the BCM timer
+        - Generic timer IRQ now drives the preemptive scheduler path through Hyp IRQ handling, while BCM timer IRQ raises guest VIRQ_TIMER
+        - Hyp's own scheduling time slices are controlled by the generic timer - guests VIRQs are based on the BCM timer
+    - Added round-robin style scheduling infrastructure
+        - More robust vCPU structs and full vCPU context switch - save/restore banked registers and hyp return frame between vCPUs
+        - Added new test that uses same `guests/virq-main.c` test but with scheduling infra in place, with one vCPU. Confirmed that the vCPU was constantly switching to and from itself with tracing.
+            - Proves the timer-preemption/save-load path with one vCPU self-switching, but not yet fairness or isolation between two vCPUs.

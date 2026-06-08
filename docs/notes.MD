@@ -337,6 +337,17 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
    - Includes things like which registers arguments/hypercall number goes into, which reg is return value, which registers are clobbered/preserved
 - ARM SMCCC explicitly use an immediate of 0 for `HVC` so we'll follow that. In general, ARM firmware ABIS also just put the function ID/args in regs and keep the immediate zero, which kkind of makes sense - the a pain to access compared to registers.  
 
+#### Guest HVC execution path
+   1. CPU takes exception to Hyp mode
+   2. HVBAR selects _hyp_vector_table
+   3. HVC from lower mode enters hyp_lower_sync
+   4. hyp-vectors.S allocates HypExceptState on the Hyp stack
+   5. hyp-vectors.S saves r0-r12, lr, HSR, ELR_hyp, SPSR_hyp, fault regs, exception_type
+   6. hyp_handle_exception(hyp_state)
+   7. handle_lower_sync(hyp_state)
+   8. handle_hvc_from_lower(hyp_state)
+   9. hyp_handle_guest_hypercall(hyp_state)
+   
 #### Virtual IRQ controller model
 - Armv8-A supports virtual interrupts, but not necessarily a built-in generic virtual interrupt controller in the core. We still need things like interrupt IDs, priorities, masking for IRQs, etc. 
 - For this repo, we use two bitmaps: one that tracks pending virqs, and another that tracks active virqs. 
@@ -347,3 +358,23 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
 - The guest needs:
    - A way to find out which virtual IRQ triggered its IRQ handler
    - A way to let the hypervisor know that it is done processing the IRQ so the appropriate bitmaps can be cleared 
+
+#### vCPU scheduling
+- Kind of like a task manager interface, but basically we need a way to switch between vCPU contexts (like thread context switching)
+   - In particular, each exception-capable mode has a banked `SP` and return register except Hyp mode, which uses `ELR_hyp` and banked `SPSR`, which we will need to properly save/restore when switching between vCPU contexts
+- I did a pretty simple round robin scheduler, using the ARM generic timer tick rate as the time slice
+- 
+
+#### ARM Generic Timer
+- https://www.raspberrypi.com/documentation/computers/processors.html
+says to use the BCM2836 Arm-local peripherals for ARM peripherals, including the generic timer. 
+- The Cortex uses four central timer control and four central timer status registers. 
+- Page 13 of the BCM2836 peripherals doc describes the bit offsets but the rundown is: 
+   - **timer 0 = CNTPNSIRQ / non-secure EL1 physical timer**
+   - timer 1 = CNTPSIRQ / secure physical timer
+   - **timer 2 = CNTHPIRQ / Hyp / EL2 physical timer**
+   - timer 3 = CNTVIRQ / virtual timer
+- The generic timer can either run on the local APB clock, which is half the speed of the ARM, or on the crystal timer, which is always 19.2 MHz no matter what.
+- If using the local APB clock, the generic timer runs at half the speed of the ARM.
+- We follow what the Linux irq-bcm2836.c driver does and use the crystal timer for scheduling stability (that way changing the ARM clock doesn't mess up our timings), which gives us a tick rate/period of about 10 ms if we set the clock timer interrupt hz to 100 interrupts per second (timer condition occurs every 192000 counter ticks, or roughly 192,000 / 19,200,200 = 10 ms)
+- there is no reload register in the ARM generic timer architecture, so you will have to manually rearm the timer by setting the correct number of ticks per period into the `CNTHP_TVAL` register and enabling the timer again

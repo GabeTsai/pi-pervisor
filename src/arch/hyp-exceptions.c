@@ -3,10 +3,12 @@
 #include "printk.h"
 #include "hyp-regs.h"
 #include "hv/hypercall.h"
+#include "hv/scheduler.h"
 #include "hv/virq.h"
 #include "check.h" 
 #include "panic.h"
 #include "aarch32.h"
+#include "generic_timer.h"
 #include "timer.h"
 
 bool hyp_verbose = false;
@@ -119,7 +121,8 @@ static bool is_guest_hvc(HypExceptState *hyp_state) {
 }
 
 static bool is_timer_irq(HypExceptState *hyp_state) {
-    return hyp_state->exception_type == HYP_EXCEPTION_IRQ && TIM_Check_IRQ();
+    return hyp_state->exception_type == HYP_EXCEPTION_IRQ &&
+           (GEN_TIM_irq_pending() || TIM_Check_IRQ());
 }
 
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) { 
@@ -199,15 +202,28 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
 }
 
 HypExceptAction handle_irq(HypExceptState *hyp_state) { 
+    // ARM generic timer path
+    if (GEN_TIM_irq_pending()) {
+        GEN_TIM_ack();
+        counter++;
+
+        HypExceptAction action = hv_scheduler_advance(&scheduler, hyp_state);
+        GEN_TIM_rearm();
+        return action;
+    }
+    // BCM timer path
     if (TIM_Check_IRQ()) {
         TIM_Clear_Pending();
+        counter++;
         
-        int res = hv_virq_raise_current(&virq_controller, VIRQ_TIMER);
+        HvVcpu *vcpu = hv_scheduler_get_current(&scheduler);
+        int res = hv_virq_raise(vcpu, VIRQ_TIMER);
         if (res != 0 && res != HV_VIRQ_ERR_BUSY) { 
             trace("Failed to raise timer VIRQ: %d\n", res);
             return HYP_ACTION_HALT;
         }
 
+        hv_virq_sync(vcpu);
         return HYP_ACTION_RETURN;
 
     }

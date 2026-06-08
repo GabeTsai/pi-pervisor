@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef __ASSEMBLER__
-#include <stdint.h>
-#endif
-
 #define HSR_EC_SHIFT 26
 #define HSR_EC_MASK  0x3f
 #define HSR_EC(hsr)  (((hsr) >> HSR_EC_SHIFT) & HSR_EC_MASK)
@@ -17,8 +13,28 @@
 #define HSR_ISS_MASK  0x01ffffff
 #define HSR_ISS(hsr)  (((hsr) >> HSR_ISS_SHIFT) & HSR_ISS_MASK)
 
+#define HYP_BANKED_SP_USR    0
+#define HYP_BANKED_SP_SVC    4
+#define HYP_BANKED_LR_SVC    8
+#define HYP_BANKED_SPSR_SVC  12
+#define HYP_BANKED_SP_IRQ    16
+#define HYP_BANKED_LR_IRQ    20
+#define HYP_BANKED_SPSR_IRQ  24
+#define HYP_BANKED_SIZE      28
+
+// HCR bitmasks
+#define HCR_VM   (1 << 0)
+#define HCR_SWIO (1 << 1)
+#define HCR_PTW  (1 << 2)
+#define HCR_FMO  (1 << 3)
+#define HCR_IMO  (1 << 4)
+#define HCR_VI   (1 << 7)
+
 // lower/same referring to relative level of execution exception was taken from
 #ifndef __ASSEMBLER__
+
+#include <stdint.h>
+
 enum {
     HSR_EC_UNKNOWN                       = 0b000000,
     HSR_EC_WFI_WFE                       = 0b000001,
@@ -39,17 +55,17 @@ enum {
     HSR_EC_DATA_ABORT_LOWER              = 0b100100,
     HSR_EC_DATA_ABORT_SAME               = 0b100101,
 };
-#endif
 
-// HCR bitmasks
-#define HCR_VM   (1 << 0)
-#define HCR_SWIO (1 << 1)
-#define HCR_PTW  (1 << 2)
-#define HCR_FMO  (1 << 3)
-#define HCR_IMO  (1 << 4)
-#define HCR_VI   (1 << 7)
+typedef struct {
+    uint32_t sp_usr;
+    uint32_t sp_svc;
+    uint32_t lr_svc;
+    uint32_t spsr_svc;
+    uint32_t sp_irq;
+    uint32_t lr_irq;
+    uint32_t spsr_irq;
+} HypBankedRegs;
 
-#ifndef __ASSEMBLER__
 uint32_t read_hcr(void);
 void write_hcr(uint32_t value);
 void set_hcr_bit(uint32_t bit);
@@ -59,4 +75,8 @@ static inline void hyp_enable_irq_routing(void) {
 }
 
 uint32_t hsr_iss_imm16(uint32_t hsr);
+
+// save/load banked registers for context switching between vcpus
+void hyp_save_banked_regs(HypBankedRegs *banked_regs);
+void hyp_load_banked_regs(const HypBankedRegs *banked_regs);
 #endif

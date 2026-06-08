@@ -20,14 +20,15 @@
 #define HYP_FEATURE_UART  (1 << 3)
 
 // hypercall numbers implemented by the hypervisor
-#define HYPERCALL_GET_ABI_VERSION 0
-#define HYPERCALL_GET_FEATURES    1
-#define HYPERCALL_EXIT            2
-#define HYPERCALL_YIELD           3
-#define HYPERCALL_PUTCHAR           4
-#define HYPERCALL_GET_HYP_IRQ_COUNT 5
-#define HYPERCALL_VIRQ_CLAIM        6
-#define HYPERCALL_VIRQ_COMPLETE     7
+#define HYPERCALL_GET_ABI_VERSION   0
+#define HYPERCALL_GET_FEATURES      1
+#define HYPERCALL_EXIT              2
+#define HYPERCALL_YIELD             3
+#define HYPERCALL_ADVANCE           4
+#define HYPERCALL_PUTCHAR           5
+#define HYPERCALL_GET_HYP_IRQ_COUNT 6
+#define HYPERCALL_VIRQ_CLAIM        7
+#define HYPERCALL_VIRQ_COMPLETE     8
 
 // guest exit statuses passed from guest to hypervisor
 #define HYP_GUEST_EXIT_SUCCESS 0

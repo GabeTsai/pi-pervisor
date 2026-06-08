@@ -25,6 +25,7 @@ TESTS := \
 	test-basic-guest-hvc \
 	test-guest-image \
 	test-guest-virq-image \
+	test-guest-sched-virq-image \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -62,6 +63,7 @@ REPO_C_SRCS := \
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
+	$(ROOT)/src/arch/hyp-banked-regs.S \
 	$(ROOT)/src/arch/hyp-enter-lower.S \
 	$(ROOT)/guests/lib/guest_hypercall.S
 
@@ -129,6 +131,9 @@ TEST_EXTRA_OBJS_test-guest-image := \
 	build/tests/test-guest-image/test/test-guest-image.S.o
 
 TEST_EXTRA_OBJS_test-guest-virq-image := \
+	build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o
+
+TEST_EXTRA_OBJS_test-guest-sched-virq-image := \
 	build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o
 
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))

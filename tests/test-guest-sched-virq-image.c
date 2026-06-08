@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "generic_timer.h"
 #include "guest-image.h"
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
@@ -29,6 +30,7 @@ void main(void) {
 
     hv_scheduler_init(&scheduler);
     hv_virq_init(&virq_controller);
+    hv_scheduler_verbose = true;
 
     TIM_Clear_Pending();
     TIM_Enable();
@@ -36,7 +38,12 @@ void main(void) {
     TIM_Clear_Pending();
     TIM_Enable_IRQ();
 
+    GEN_TIM_init(100);
+    GEN_TIM_enable();
+
     hyp_enable_irq_routing();
+
+    scheduler.cur_vcpu->state = HV_VCPU_RUNNING;
 
     hyp_enter_lower_mode(
         (HypLowerEntry)GUEST_BASE,

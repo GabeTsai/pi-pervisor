@@ -28,7 +28,7 @@ void guest_main(void) {
     clear_cpsr_bit(CPSR_I);
 
     guest_puts("guest_main start\n");
-    while (guest_timer_ticks < 100) { }
+    while (guest_timer_ticks < 300) { }
 
     guest_exit(HYP_GUEST_EXIT_SUCCESS);
 }

@@ -21,6 +21,7 @@ TESTS := \
 	test-hyp-data-abort \
 	test-hyp-enter-lower \
 	test-hyp-irq \
+	test-hyp-generic-timer \
 	test-basic-guest-hvc \
 	test-guest-image \
 	test-guest-virq-image \
@@ -47,6 +48,7 @@ REPO_C_SRCS := \
 	$(ROOT)/src/arch/hyp-regs.c \
 	$(ROOT)/src/arch/hyp-exceptions.c \
 	$(ROOT)/src/drivers/gpio.c \
+	$(ROOT)/src/drivers/generic_timer.c \
 	$(ROOT)/src/drivers/timer.c \
 	$(ROOT)/src/drivers/uart.c \
 	$(ROOT)/src/lib/check.c \
@@ -54,6 +56,8 @@ REPO_C_SRCS := \
 	$(ROOT)/src/platform/irq.c \
 	$(ROOT)/src/platform/platform.c \
 	$(ROOT)/src/hv/hypercall.c \
+	$(ROOT)/src/hv/scheduler.c \
+	$(ROOT)/src/hv/vcpu.c \
 	$(ROOT)/src/hv/virq.c
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
@@ -112,6 +116,9 @@ TEST_EXTRA_OBJS_test-hyp-enter-lower := \
 	build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o
 
 TEST_EXTRA_OBJS_test-hyp-irq := \
+	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o
+
+TEST_EXTRA_OBJS_test-hyp-generic-timer := \
 	build/tests/test-basic-guest-hvc/test/test-basic-guest-hvc.S.o
 
 TEST_EXTRA_OBJS_test-basic-guest-hvc := \

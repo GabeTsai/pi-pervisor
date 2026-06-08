@@ -1,5 +1,6 @@
 #pragma once
 
+#include "aarch32.h"
 #include "printk.h"
 
 #define PANIC_STRINGIFY(x) #x
@@ -10,8 +11,21 @@
     while(1); \
 } while(0)
 
+static inline const char *trace_current_el(void) {
+    uint32_t mode = read_cpsr() & CPSR_PEMODE_MASK;
+
+    switch (mode) {
+        case CPSR_PEMODE_HYP:
+            return "EL2";
+        case CPSR_PEMODE_USR:
+            return "EL0";
+        default:
+            return "EL1"; 
+    }
+}
+
 #define trace(args...) \
-    do { printk("TRACE:%s: ", __FUNCTION__); printk(args); } while(0)
+    do { printk("TRACE[%s]:%s: ", trace_current_el(), __FUNCTION__); printk(args); } while(0)
 
 // credit to CS240LX/140e
 #define die(msg...) do { 						                            \

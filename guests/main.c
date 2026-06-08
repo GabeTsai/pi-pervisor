@@ -1,9 +1,10 @@
 #include "guest_hypercall.h"
 #include "aarch32.h"
+#include "printk.h"
 
 void guest_main(void)
 {
-    guest_puts("hello from guest\n");
+    printk("hello from guest\n");
 
     if (guest_get_abi_version() != HYPERCALL_ABI_VERSION) {
         guest_exit(HYP_GUEST_EXIT_FAILURE);

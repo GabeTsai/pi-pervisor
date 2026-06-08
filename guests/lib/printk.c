@@ -1,15 +1,16 @@
+#include "guest_hypercall.h"
 #include "printk.h"
-#include "uart.h"
 
-static void printk_uart_putc(char c) {
+static void guest_printk_putc(char c) {
     if (c == '\n') {
-        UART_Send_Char('\r');
+        guest_putchar('\r');
     }
-    UART_Send_Char(c);
+    guest_putchar((uint8_t)c);
 }
 
+// guest printk internally uses putchar hypercalls to hyp for prints
 int vprintk(const char *fmt, va_list args) { 
-    return vprintk_with_putc(printk_uart_putc, fmt, args);
+    return vprintk_with_putc(guest_printk_putc, fmt, args);
 }
 
 int printk(const char *fmt, ...) { 

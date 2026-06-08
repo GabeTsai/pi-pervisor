@@ -8,13 +8,14 @@ OBJDUMP := $(ARMGNU)-objdump
 BUILD_DIR := build
 TARGETS := guest guest-virq
 
-COMMON_SRCS := start.S guest-vectors.S lib/guest_hypercall.S
-COMMON_OBJS := $(patsubst %.S,$(BUILD_DIR)/%.o,$(COMMON_SRCS))
+COMMON_S_SRCS := start.S guest-vectors.S lib/guest_hypercall.S
+COMMON_OBJS := $(patsubst %.S,$(BUILD_DIR)/%.o,$(COMMON_S_SRCS))
+COMMON_OBJS += $(BUILD_DIR)/lib/printk.o $(BUILD_DIR)/repo/src/lib/printk_format.o
 GUEST_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/main.o
 GUEST_VIRQ_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/virq-main.o
 DEPS := $(GUEST_OBJS:.o=.d) $(GUEST_VIRQ_OBJS:.o=.d)
 
-CPPFLAGS := -I../include -I../include/arch -I../include/hv -Ilib -MMD -MP
+CPPFLAGS := -I../include -I../include/arch -I../include/hv -I../include/lib -Ilib -MMD -MP
 CFLAGS := -O2 -Wall -Wextra -Werror -ffreestanding -nostdlib -nostartfiles
 CFLAGS += -std=gnu99 -mcpu=$(ARMCPU) -marm -mno-unaligned-access
 LDFLAGS := -T linker.ld -nostdlib -nostartfiles -ffreestanding
@@ -38,6 +39,10 @@ $(BUILD_DIR)/guest-virq.elf: $(GUEST_VIRQ_OBJS) linker.ld
 	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest-virq.list
 
 $(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/repo/src/lib/%.o: ../src/lib/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 

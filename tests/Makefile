@@ -54,6 +54,7 @@ REPO_C_SRCS := \
 	$(ROOT)/src/drivers/uart.c \
 	$(ROOT)/src/lib/check.c \
 	$(ROOT)/src/lib/printk.c \
+	$(ROOT)/src/lib/printk_format.c \
 	$(ROOT)/src/platform/irq.c \
 	$(ROOT)/src/platform/platform.c \
 	$(ROOT)/src/hv/hypercall.c \

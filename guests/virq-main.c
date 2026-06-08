@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "guest_hypercall.h"
+#include "printk.h"
 #include "virq-abi.h"
 
 volatile uint32_t guest_timer_ticks;
@@ -27,7 +28,7 @@ void guest_main(void) {
     // clear CSPR.I so virtual IRQs can be taken to guest
     clear_cpsr_bit(CPSR_I);
 
-    guest_puts("guest_main start\n");
+    printk("guest_main start\n");
     while (guest_timer_ticks < 300) { }
 
     guest_exit(HYP_GUEST_EXIT_SUCCESS);

@@ -14,7 +14,7 @@ HypExceptAction hyp_handle_guest_hypercall(HypExceptState *s) {
         s->r[0] = HYPERCALL_ABI_VERSION;
         return HYP_ACTION_RETURN;
     case HYPERCALL_GET_FEATURES:
-        s->r[0] = HYP_FEATURE_BASE | HYP_FEATURE_VIRQ | HYP_FEATURE_TIMER;
+        s->r[0] = HYP_FEATURE_BASE | HYP_FEATURE_VIRQ | HYP_FEATURE_TIMER | HYP_FEATURE_UART;
         return HYP_ACTION_RETURN;
     case HYPERCALL_EXIT:
         trace("guest exiting, status: %d\n", s->r[1]);

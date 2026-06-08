@@ -363,7 +363,14 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
 - Kind of like a task manager interface, but basically we need a way to switch between vCPU contexts (like thread context switching)
    - In particular, each exception-capable mode has a banked `SP` and return register except Hyp mode, which uses `ELR_hyp` and banked `SPSR`, which we will need to properly save/restore when switching between vCPU contexts
 - I did a pretty simple round robin scheduler, using the ARM generic timer tick rate as the time slice
-- 
+- Idle dummy vCPU that Hyp `eret`s to when there are no runnable guest vCPUs. The dummy vCPU runs a `wfi` loop, parking the CPU until a physical interrupt wakes it and traps back into Hyp.
+   - Otherwise, would have a separate "idle case" execution path where the scheduler stays in Hyp and guest in wfi loop, rather than choosing a vCPU and the vCPU just wfis there 
+- Each guest owns a virtual timer that is based off of the BCM timer. General flow of execution is like this: 
+   1. BCM ARM timer fires physically. 
+   2. The IRQ is intercepted by Hyp, Hyp also checks if the IRQ is valid
+   3. Hyp reads BCM system timer time in ticks
+   4. Hyp checks the "deadlines," or the future time when that vCPU's virtual timer should fire. 
+   5. Hyp raises VIRQ_TIMER into a selected guest whose deadline time is greater than or equal to current time. 
 
 #### ARM Generic Timer
 - https://www.raspberrypi.com/documentation/computers/processors.html

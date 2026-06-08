@@ -3,6 +3,7 @@
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
 #include "hv/scheduler.h"
+#include "hv/vcpu.h"
 #include "hv/virq.h"
 #include "panic.h"
 #include "timer.h"
@@ -10,6 +11,9 @@
 
 extern uint8_t guest_virq_image_start[];
 extern uint8_t guest_virq_image_end[];
+
+#define GUEST_TIMER_HZ 300
+#define USEC_PER_SEC 1000000u
 
 static void load_guest_virq_image(void) {
     uint8_t *dst = (uint8_t *)GUEST_BASE;
@@ -32,9 +36,13 @@ void main(void) {
 
     TIM_Clear_Pending();
     TIM_Enable();
-    TIM_Set_Frequency(300);
+    TIM_Set_Frequency(GUEST_TIMER_HZ);
     TIM_Clear_Pending();
     TIM_Enable_IRQ();
+
+    hv_vcpu_timer_start_periodic(scheduler.cur_vcpu,
+                                 TIM_SYS_Get_Ticks(),
+                                 USEC_PER_SEC / GUEST_TIMER_HZ);
 
     hyp_enable_irq_routing();
 

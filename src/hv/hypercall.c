@@ -17,9 +17,14 @@ HypExceptAction hyp_handle_guest_hypercall(HypExceptState *s) {
         s->r[0] = HYP_FEATURE_BASE | HYP_FEATURE_VIRQ | HYP_FEATURE_TIMER | HYP_FEATURE_UART;
         return HYP_ACTION_RETURN;
     case HYPERCALL_EXIT:
+        vcpu = hv_scheduler_get_current(&scheduler);
+        if (vcpu == 0) { 
+            return HYP_ACTION_HALT;
+        } 
+
         trace("guest exiting, status: %d\n", s->r[1]);
-        clean_reboot();
-        return HYP_ACTION_HALT;
+        vcpu->state = HV_VCPU_EXITED;
+        return hv_scheduler_advance(&scheduler, s);
     case HYPERCALL_YIELD:
         return hv_scheduler_yield(&scheduler, s);
     case HYPERCALL_PUTCHAR:

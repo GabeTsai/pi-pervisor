@@ -67,6 +67,7 @@ REPO_S_SRCS := \
 	$(ROOT)/src/arch/hyp-banked-regs.S \
 	$(ROOT)/src/arch/hyp-enter-vcpu.S \
 	$(ROOT)/src/arch/hyp-enter-lower.S \
+	$(ROOT)/src/hv/idle-vcpu.S \
 	$(ROOT)/guests/lib/guest_hypercall.S
 
 REPO_C_OBJS := $(patsubst $(ROOT)/%.c,$(REPO_BUILD_DIR)/%.o,$(REPO_C_SRCS))

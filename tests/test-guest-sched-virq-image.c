@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "check.h"
 #include "generic_timer.h"
 #include "guest-image.h"
 #include "hyp-enter-lower.h"
@@ -12,6 +13,10 @@
 
 extern uint8_t guest_virq_image_start[];
 extern uint8_t guest_virq_image_end[];
+extern void hv_idle_vcpu_entry(void);
+
+#define GUEST_TIMER_HZ 300
+#define USEC_PER_SEC 1000000u
 
 static void load_guest_virq_image(void) {
     uint8_t *dst = (uint8_t *)GUEST_BASE;
@@ -31,11 +36,11 @@ void main(void) {
 
     hv_scheduler_init(&scheduler);
     hv_virq_init(&virq_controller);
-    hv_scheduler_verbose = true;
+    hv_scheduler_verbose = false;
 
     TIM_Clear_Pending();
     TIM_Enable();
-    TIM_Set_Frequency(300);
+    TIM_Set_Frequency(GUEST_TIMER_HZ);
     TIM_Clear_Pending();
     TIM_Enable_IRQ();
 
@@ -46,6 +51,9 @@ void main(void) {
 
     HvVcpu *boot_vcpu = &scheduler.vcpus[0];
     hv_vcpu_init(boot_vcpu, 0, GUEST_BASE, 0, HYP_LOWER_SVC_CPSR);
+    hv_vcpu_timer_start_periodic(boot_vcpu,
+                                 TIM_SYS_Get_Ticks(),
+                                 USEC_PER_SEC / GUEST_TIMER_HZ);
 
     scheduler.cur_idx = 0;
     scheduler.cur_vcpu = boot_vcpu;

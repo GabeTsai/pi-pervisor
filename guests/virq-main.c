@@ -3,6 +3,8 @@
 #include "printk.h"
 #include "virq-abi.h"
 
+// basic single-vCPU test for scheduling infrastructure and virtual timer interrupts
+// should idle in dummy vCPU's wfi loop after code finishes
 volatile uint32_t guest_timer_ticks;
 
 void guest_irq_handler(void) {
@@ -30,6 +32,9 @@ void guest_main(void) {
 
     printk("guest_main start\n");
     while (guest_timer_ticks < 300) { }
+
+    printk("second round of waiting\n");
+    while (guest_timer_ticks < 600) { }
 
     guest_exit(HYP_GUEST_EXIT_SUCCESS);
 }

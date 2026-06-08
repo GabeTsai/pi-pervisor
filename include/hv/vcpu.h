@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "hyp-exceptions.h"
 #include "hyp-regs.h"
@@ -19,17 +20,30 @@ typedef struct {
     HypBankedRegs banked_regs; // saved banked lower-mode registers
 } HvVcpuContext;
 
+// each guest vCPU thinks it has its own timer
+typedef struct {
+    bool enabled;
+    uint64_t deadline;
+    uint64_t period;
+} HvVcpuTimer;
+
 typedef struct { 
     uint32_t id;
     HvVcpuState state;
     HvVcpuContext context;
     uint32_t virq_pending;
     uint32_t virq_active;
-
+    HvVcpuTimer timer;
 } HvVcpu;
 
 void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stack_top, uint32_t cpsr);
 __attribute__((noreturn))
 void hv_vcpu_enter_initial(HvVcpu *vcpu);
+void hv_vcpu_block(HvVcpu *vcpu);
+void hv_vcpu_wake(HvVcpu *vcpu);
+void hv_vcpu_timer_start_periodic(HvVcpu *vcpu, uint64_t now, uint64_t period);
+void hv_vcpu_timer_disable(HvVcpu *vcpu);
+bool hv_vcpu_timer_expired(HvVcpu *vcpu, uint64_t now);
+void hv_vcpu_timer_advance(HvVcpu *vcpu, uint64_t now);
 void hv_vcpu_save(HvVcpu *vcpu, HypExceptState *hyp_state);
 void hv_vcpu_load(HvVcpu *vcpu, HypExceptState *hyp_state);

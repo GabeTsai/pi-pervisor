@@ -125,6 +125,31 @@ static bool is_timer_irq(HypExceptState *hyp_state) {
            (GEN_TIM_irq_pending() || TIM_Check_IRQ());
 }
 
+static bool deliver_expired_timers(uint64_t now) {
+    bool delivered = false;
+
+    for (uint32_t i = 0; i < HV_MAX_GUEST_VCPUS; i++) {
+        HvVcpu *vcpu = &scheduler.vcpus[i];
+
+        if (vcpu->state == HV_VCPU_IDLE ||
+            vcpu->state == HV_VCPU_EXITED ||
+            !hv_vcpu_timer_expired(vcpu, now)) {
+            continue;
+        }
+
+        int res = hv_virq_raise(vcpu, VIRQ_TIMER);
+        if (res != 0 && res != HV_VIRQ_ERR_BUSY) {
+            trace("Failed to raise timer VIRQ: %d\n", res);
+            continue;
+        }
+
+        hv_vcpu_timer_advance(vcpu, now);
+        delivered = true;
+    }
+
+    return delivered;
+}
+
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) { 
     if (hyp_verbose || (!is_guest_hvc(hyp_state) && !is_timer_irq(hyp_state))) {
         hyp_dump_exception_state(hyp_state);
@@ -194,6 +219,11 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
         case HSR_EC_HVC_A32: 
             return handle_hvc_from_lower(hyp_state);
         case HSR_EC_WFI_WFE:
+            if ((HSR_ISS(hyp_state->hsr) & HSR_WFI_WFE_IS_WFE) != 0) {
+                trace("Unhandled WFE trap in Hyp\n");
+                return HYP_ACTION_HALT;
+            }
+            return hv_scheduler_handle_wfi(&scheduler, hyp_state);
         case HSR_EC_CP15_MCR_MRC:
         default:
             trace("Unhandled lower-level trap in Hyp\n");
@@ -215,15 +245,20 @@ HypExceptAction handle_irq(HypExceptState *hyp_state) {
     if (TIM_Check_IRQ()) {
         TIM_Clear_Pending();
         counter++;
-        
-        HvVcpu *vcpu = hv_scheduler_get_current(&scheduler);
-        int res = hv_virq_raise(vcpu, VIRQ_TIMER);
-        if (res != 0 && res != HV_VIRQ_ERR_BUSY) { 
-            trace("Failed to raise timer VIRQ: %d\n", res);
-            return HYP_ACTION_HALT;
+
+        uint64_t now = TIM_SYS_Get_Ticks();
+        bool delivered = deliver_expired_timers(now);
+        if (!delivered) {
+            if (hv_scheduler_is_idle_vcpu(hv_scheduler_get_current(&scheduler))) {
+                return hv_scheduler_advance(&scheduler, hyp_state);
+            }
+            return HYP_ACTION_RETURN;
         }
 
-        hv_virq_sync(vcpu);
+        hv_virq_sync(hv_scheduler_get_current(&scheduler));
+        if (hv_scheduler_is_idle_vcpu(hv_scheduler_get_current(&scheduler))) {
+            return hv_scheduler_advance(&scheduler, hyp_state);
+        }
         return HYP_ACTION_RETURN;
 
     }

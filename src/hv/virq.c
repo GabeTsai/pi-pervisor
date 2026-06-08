@@ -43,6 +43,7 @@ void hv_virq_sync(HvVcpu *vcpu) {
     }
 }
 
+// raise a virtual IRQ to a vCPU and unblock it
 int hv_virq_raise(HvVcpu *vcpu, VIRQ_Source virq_source) {
     int err = validate(vcpu, virq_source);
     // if the virq is already pending or active, return an error
@@ -52,6 +53,7 @@ int hv_virq_raise(HvVcpu *vcpu, VIRQ_Source virq_source) {
         return HV_VIRQ_ERR_BUSY;
     }
     vcpu->virq_pending |= 1 << virq_source;
+    hv_vcpu_wake(vcpu);
     return 0;
 }
 

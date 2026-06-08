@@ -25,6 +25,61 @@ void hv_vcpu_enter_initial(HvVcpu *vcpu) {
     hyp_enter_vcpu_context(&vcpu->context.hyp_state, &vcpu->context.banked_regs);
 }
 
+void hv_vcpu_block(HvVcpu *vcpu) {
+    if (vcpu != 0) {
+        vcpu->state = HV_VCPU_BLOCKED;
+    }
+}
+
+void hv_vcpu_wake(HvVcpu *vcpu) {
+    if (vcpu != 0 && vcpu->state == HV_VCPU_BLOCKED) {
+        vcpu->state = HV_VCPU_RUNNABLE;
+    }
+}
+
+// initialize periodic virtual timer for vCPU
+void hv_vcpu_timer_start_periodic(HvVcpu *vcpu, uint64_t now, uint64_t period) {
+    if (vcpu == 0 || period == 0) {
+        return;
+    }
+
+    vcpu->timer.enabled = true;
+    vcpu->timer.period = period;
+    vcpu->timer.deadline = now + period;
+}
+
+// disable virtual timer for vCPU
+void hv_vcpu_timer_disable(HvVcpu *vcpu) {
+    if (vcpu == 0) {
+        return;
+    }
+
+    vcpu->timer.enabled = false;
+    vcpu->timer.period = 0;
+    vcpu->timer.deadline = 0;
+}
+
+// check if virtual timer countdown expired
+bool hv_vcpu_timer_expired(HvVcpu *vcpu, uint64_t now) {
+    return vcpu != 0 && vcpu->timer.enabled && now >= vcpu->timer.deadline;
+}
+
+void hv_vcpu_timer_advance(HvVcpu *vcpu, uint64_t now) {
+    if (vcpu == 0 || !vcpu->timer.enabled) {
+        return;
+    }
+
+    if (vcpu->timer.period == 0) {
+        hv_vcpu_timer_disable(vcpu);
+        return;
+    }
+    // advance timer deadline to next expiration
+    // NOTE: under heavy load, guest may miss multiple timer interrupts
+    do {
+        vcpu->timer.deadline += vcpu->timer.period;
+    } while (now >= vcpu->timer.deadline);
+}
+
 static void copy_hyp_state(HypExceptState *dst, const HypExceptState *src) {
     uint32_t *dst_words = (uint32_t *)dst;
     const uint32_t *src_words = (const uint32_t *)src;

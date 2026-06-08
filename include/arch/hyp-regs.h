@@ -29,6 +29,10 @@
 #define HCR_FMO  (1 << 3)
 #define HCR_IMO  (1 << 4)
 #define HCR_VI   (1 << 7)
+#define HCR_TWI  (1 << 13)
+
+// bit 1 of HSR ISS encoding for WFI/WFE determines if WFI/WFE trapped
+#define HSR_WFI_WFE_IS_WFE (1 << 0)
 
 // lower/same referring to relative level of execution exception was taken from
 #ifndef __ASSEMBLER__

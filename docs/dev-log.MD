@@ -107,4 +107,10 @@
         - More robust vCPU structs and full vCPU context switch - save/restore banked registers and hyp return frame between vCPUs
         - Added new test that uses same `guests/virq-main.c` test but with scheduling infra in place, with one vCPU. Confirmed that the vCPU was constantly switching to and from itself with tracing.
             - Proves the timer-preemption/save-load path with one vCPU self-switching, but not yet fairness or isolation between two vCPUs.
-    - Added explicit vCPU initialization/entering vCPU program initialization path rather than using `hyp_enter_lower_mode` 
+    - Added explicit vCPU initialization/entering vCPU program initialization path rather than using `hyp_enter_lower_mode`
+    - Added idle dummy vCPU that hyp `eret`s to when there are no runnable vCPUs for cleaner execution model with current code 
+    - Edited the basic guest image test to test the "idle when no runnable vCPU" pathway
+    - Added periodic virtual timer for each vCPU based that uses the BCM physical timer IRQ path 
+    - Basically, setup all the infra necessary for context switching between guests that are using interrupts
+    - TODO: 2/3 guest test - first test with interleaved prints, second test with virtual timers enabled, testing both of their virtual timer interrupts
+

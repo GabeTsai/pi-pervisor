@@ -64,6 +64,7 @@ REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
 	$(ROOT)/src/arch/hyp-banked-regs.S \
+	$(ROOT)/src/arch/hyp-enter-vcpu.S \
 	$(ROOT)/src/arch/hyp-enter-lower.S \
 	$(ROOT)/guests/lib/guest_hypercall.S
 

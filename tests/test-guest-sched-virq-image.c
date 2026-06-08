@@ -4,6 +4,7 @@
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
 #include "hv/scheduler.h"
+#include "hv/vcpu.h"
 #include "hv/virq.h"
 #include "panic.h"
 #include "timer.h"
@@ -43,13 +44,14 @@ void main(void) {
 
     hyp_enable_irq_routing();
 
-    scheduler.cur_vcpu->state = HV_VCPU_RUNNING;
+    HvVcpu *boot_vcpu = &scheduler.vcpus[0];
+    hv_vcpu_init(boot_vcpu, 0, GUEST_BASE, 0, HYP_LOWER_SVC_CPSR);
 
-    hyp_enter_lower_mode(
-        (HypLowerEntry)GUEST_BASE,
-        0,
-        HYP_LOWER_SVC_CPSR
-    );
+    scheduler.cur_idx = 0;
+    scheduler.cur_vcpu = boot_vcpu;
+    boot_vcpu->state = HV_VCPU_RUNNING;
+
+    hv_vcpu_enter_initial(boot_vcpu);
 
     panic("should not get here");
 }

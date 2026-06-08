@@ -28,6 +28,8 @@ typedef struct {
 
 } HvVcpu;
 
-int hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stack_top, uint32_t cpsr);
+void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stack_top, uint32_t cpsr);
+__attribute__((noreturn))
+void hv_vcpu_enter_initial(HvVcpu *vcpu);
 void hv_vcpu_save(HvVcpu *vcpu, HypExceptState *hyp_state);
 void hv_vcpu_load(HvVcpu *vcpu, HypExceptState *hyp_state);

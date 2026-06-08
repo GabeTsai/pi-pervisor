@@ -107,3 +107,4 @@
         - More robust vCPU structs and full vCPU context switch - save/restore banked registers and hyp return frame between vCPUs
         - Added new test that uses same `guests/virq-main.c` test but with scheduling infra in place, with one vCPU. Confirmed that the vCPU was constantly switching to and from itself with tracing.
             - Proves the timer-preemption/save-load path with one vCPU self-switching, but not yet fairness or isolation between two vCPUs.
+    - Added explicit vCPU initialization/entering vCPU program initialization path rather than using `hyp_enter_lower_mode` 

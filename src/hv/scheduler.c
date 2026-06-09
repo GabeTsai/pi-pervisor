@@ -20,6 +20,12 @@ static void hv_scheduler_sync_traps(uint32_t next_idx) {
     }
 }
 
+// we're not doing thumb state in this repo for now but good for completeness
+static void hv_scheduler_advance_trapped_wfi(HypExceptState *hyp_state) {
+    uint32_t instr_len = HSR_IL(hyp_state->hsr) != 0 ? 4 : 2;
+    hyp_state->elr_hyp += instr_len;
+}
+
 void hv_scheduler_init(HvScheduler *scheduler) {
     scheduler->cur_idx = 0;
 
@@ -170,6 +176,8 @@ HypExceptAction hv_scheduler_handle_wfi(HvScheduler *scheduler, HypExceptState *
     if (cur == 0 || hv_scheduler_is_idle_vcpu(cur)) {
         return hv_scheduler_enter_idle(scheduler, hyp_state);
     }
+
+    hv_scheduler_advance_trapped_wfi(hyp_state);
 
     if (cur->virq_pending != 0) {
         hv_virq_sync(cur);

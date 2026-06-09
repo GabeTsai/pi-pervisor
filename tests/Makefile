@@ -26,6 +26,8 @@ TESTS := \
 	test-guest-image \
 	test-guest-virq-image \
 	test-guest-sched-virq-image \
+	test-guest-sched-yield \
+	test-guest-sched-timer \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -139,6 +141,12 @@ TEST_EXTRA_OBJS_test-guest-virq-image := \
 TEST_EXTRA_OBJS_test-guest-sched-virq-image := \
 	build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o
 
+TEST_EXTRA_OBJS_test-guest-sched-yield := \
+	build/tests/test-guest-sched-yield/test/test-guest-sched-yield.S.o
+
+TEST_EXTRA_OBJS_test-guest-sched-timer := \
+	build/tests/test-guest-sched-timer/test/test-guest-sched-timer.S.o
+
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
 build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-lower.S
@@ -161,11 +169,31 @@ build/tests/test-guest-virq-image/test/test-guest-virq-image.S.o: test-guest-vir
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
+build/tests/test-guest-sched-yield/test/test-guest-sched-yield.S.o: test-guest-sched-yield.S $(ROOT)/guests/guest-sched0.bin $(ROOT)/guests/guest-sched1.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
+build/tests/test-guest-sched-timer/test/test-guest-sched-timer.S.o: test-guest-sched-timer.S $(ROOT)/guests/guest-timer0.bin $(ROOT)/guests/guest-timer1.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
 $(ROOT)/guests/guest.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(ROOT)/guests/guest-virq.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest-virq.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-sched0.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-sched0.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-sched1.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-sched1.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-timer0.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-timer0.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-timer1.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-timer1.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)

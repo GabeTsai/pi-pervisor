@@ -11,7 +11,7 @@
 #include "generic_timer.h"
 #include "timer.h"
 
-bool hyp_verbose = false;
+bool hyp_except_verbose = false;
 static volatile uint32_t counter = 0;
 
 uint32_t hyp_get_irq_count(void) {
@@ -114,17 +114,7 @@ bool hsr_ec_valid(uint32_t hsr, HypExceptType except_type) {
     return (valid_hsr_ec[except_type] & EC_BIT(hsr_ec)) != 0;
 }
 
-static bool is_guest_hvc(HypExceptState *hyp_state) {
-    return hyp_state->exception_type == HYP_EXCEPTION_LOWER_SYNC &&
-           HSR_EC(hyp_state->hsr) == HSR_EC_HVC_A32 &&
-           hsr_iss_imm16(hyp_state->hsr) == HYPERCALL_HVC_IMM;
-}
-
-static bool is_timer_irq(HypExceptState *hyp_state) {
-    return hyp_state->exception_type == HYP_EXCEPTION_IRQ &&
-           (GEN_TIM_irq_pending() || TIM_Check_IRQ());
-}
-
+// helper function to signal timer interrupts to guests when their countdown/deadline expires
 static bool deliver_expired_timers(uint64_t now) {
     bool delivered = false;
 
@@ -138,7 +128,11 @@ static bool deliver_expired_timers(uint64_t now) {
         }
 
         int res = hv_virq_raise(vcpu, VIRQ_TIMER);
-        if (res != 0 && res != HV_VIRQ_ERR_BUSY) {
+        if (res == HV_VIRQ_ERR_BUSY) {
+            continue;
+        }
+
+        if (res != 0) {
             trace("Failed to raise timer VIRQ: %d\n", res);
             continue;
         }
@@ -151,9 +145,10 @@ static bool deliver_expired_timers(uint64_t now) {
 }
 
 HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) { 
-    if (hyp_verbose || (!is_guest_hvc(hyp_state) && !is_timer_irq(hyp_state))) {
+    if (hyp_except_verbose) {
         hyp_dump_exception_state(hyp_state);
     }
+
     switch (hyp_state->exception_type) { 
         case HYP_EXCEPTION_UNDEF_INSTR:
             return handle_undef_instr(hyp_state);
@@ -172,8 +167,17 @@ HypExceptAction hyp_handle_exception(HypExceptState *hyp_state) {
         case HYP_EXCEPTION_FIQ:
             return handle_fiq(hyp_state);
         default:
+            if (!hyp_except_verbose) {
+                hyp_dump_exception_state(hyp_state);
+            }
             trace("Unknown Hyp exception type\n");
             return HYP_ACTION_HALT;
+    }
+}
+
+static void hyp_dump_unexpected_exception_state(HypExceptState *hyp_state) {
+    if (!hyp_except_verbose) {
+        hyp_dump_exception_state(hyp_state);
     }
 }
 
@@ -190,24 +194,28 @@ HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) {
 }
 
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Undefined instruction in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_UNDEF_INSTR), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_unknown(HypExceptState *hyp_state) { 
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Unknown exception in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_UNKNOWN), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_prefetch_abort(HypExceptState *hyp_state) { 
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Prefetch abort in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_PREFETCH_ABORT), "HSR EC mismatch");
     return HYP_ACTION_HALT;
 }
 
 HypExceptAction handle_data_abort(HypExceptState *hyp_state) { 
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Data abort in Hyp\n");
     assert(hsr_ec_valid(hyp_state->hsr, HYP_EXCEPTION_DATA_ABORT), "HSR EC mismatch");
     return HYP_ACTION_HALT;
@@ -220,12 +228,14 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
             return handle_hvc_from_lower(hyp_state);
         case HSR_EC_WFI_WFE:
             if ((HSR_ISS(hyp_state->hsr) & HSR_WFI_WFE_IS_WFE) != 0) {
+                hyp_dump_unexpected_exception_state(hyp_state);
                 trace("Unhandled WFE trap in Hyp\n");
                 return HYP_ACTION_HALT;
             }
             return hv_scheduler_handle_wfi(&scheduler, hyp_state);
         case HSR_EC_CP15_MCR_MRC:
         default:
+            hyp_dump_unexpected_exception_state(hyp_state);
             trace("Unhandled lower-level trap in Hyp\n");
             return HYP_ACTION_HALT;
     }
@@ -247,6 +257,7 @@ HypExceptAction handle_irq(HypExceptState *hyp_state) {
         counter++;
 
         uint64_t now = TIM_SYS_Get_Ticks();
+        // signal guest virtual timers
         bool delivered = deliver_expired_timers(now);
         if (!delivered) {
             if (hv_scheduler_is_idle_vcpu(hv_scheduler_get_current(&scheduler))) {
@@ -262,12 +273,14 @@ HypExceptAction handle_irq(HypExceptState *hyp_state) {
         return HYP_ACTION_RETURN;
 
     }
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Unexpected IRQ taken to Hyp\n");
     return HYP_ACTION_HALT;
 }
 
 // probably won't do fiqs for this project
 HypExceptAction handle_fiq(HypExceptState *hyp_state) { 
+    hyp_dump_unexpected_exception_state(hyp_state);
     trace("Unexpected FIQ taken to Hyp\n");
     return HYP_ACTION_HALT;
 }

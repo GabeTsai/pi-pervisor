@@ -338,15 +338,27 @@ HCR.{AMO, IMO, FMO} mask override bit is 1, the value of the corresponding PSTAT
 - ARM SMCCC explicitly use an immediate of 0 for `HVC` so we'll follow that. In general, ARM firmware ABIS also just put the function ID/args in regs and keep the immediate zero, which kkind of makes sense - the a pain to access compared to registers.  
 
 #### Guest HVC execution path
+vCPU/guest initialization/first entry:
+   1. hv_vcpu_init() creates a vCPU context with synthetic exception frame and sets the `elr_hyp` and `spsr_hyp` of the vCPU environment to the appropriate code entry point/guest CPSR respectively, and also sets any guest banked registers
+   2. hv_vcpu_enter_initial() is called when Hyp does not have a live exception frame on the Hyp stack to reuse for a return path, and will pass the synthetic exception frame/banked regs to hyp_enter_vcpu_context(), which will load all of that state and eret into EL1
+   3. The real exception frame is initialized later when the guest traps back into Hyp, and where we follow the below execution flow:
+
+
+After a vCPU is running and takes an exception/trap into Hyp:
    1. CPU takes exception to Hyp mode
    2. HVBAR selects _hyp_vector_table
    3. HVC from lower mode enters hyp_lower_sync
    4. hyp-vectors.S allocates HypExceptState on the Hyp stack
    5. hyp-vectors.S saves r0-r12, lr, HSR, ELR_hyp, SPSR_hyp, fault regs, exception_type
    6. hyp_handle_exception(hyp_state)
-   7. handle_lower_sync(hyp_state)
-   8. handle_hvc_from_lower(hyp_state)
-   9. hyp_handle_guest_hypercall(hyp_state)
+   7. handle_lower_sync(hyp_state) -> handle_hvc_from_lower(hyp_state) -> hyp_handle_guest_hypercall(hyp_state)
+   8. If the handler returns HYP_ACTION_RETURN, hyp-vectors.S restores the
+   HypExceptState currently in the stack frame, writes ELR_hyp/SPSR_hyp,
+   restores general-purpose regs, and executes eret. eret loads PC from ELR_hyp and CPSR from SPSR_hyp, returning to lower-mode guest execution:
+      - If no scheduling switch happened, this returns to the original guest
+      after the hvc.
+      - If the scheduler loaded another vCPU's saved context into the frame,
+      this returns to that vCPU's saved ELR_hyp/SPSR_hyp.
    
 #### Virtual IRQ controller model
 - Armv8-A supports virtual interrupts, but not necessarily a built-in generic virtual interrupt controller in the core. We still need things like interrupt IDs, priorities, masking for IRQs, etc. 

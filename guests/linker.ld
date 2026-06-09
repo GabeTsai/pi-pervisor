@@ -1,8 +1,11 @@
 ENTRY(_guest_start)
 
+PROVIDE(GUEST_BASE = 0x20000);
+PROVIDE(GUEST_SLOT_SIZE = 0x10000);
+
 SECTIONS
 {
-    . = 0x20000;
+    . = GUEST_BASE;
 
     .text : {
         *(.text.boot)
@@ -28,4 +31,6 @@ SECTIONS
     __guest_irq_stack_bottom__ = .;
     . += 1024;
     __guest_irq_stack_top__ = .;
+
+    ASSERT(. <= GUEST_BASE + GUEST_SLOT_SIZE, "guest image exceeds GUEST_SLOT_SIZE")
 }

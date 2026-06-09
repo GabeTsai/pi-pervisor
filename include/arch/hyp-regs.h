@@ -74,6 +74,8 @@ uint32_t read_hcr(void);
 void write_hcr(uint32_t value);
 void set_hcr_bit(uint32_t bit);
 void clear_hcr_bit(uint32_t bit);
+uint32_t read_vbar(void);
+void write_vbar(uint32_t value);
 static inline void hyp_enable_irq_routing(void) {
     set_hcr_bit(HCR_IMO);
 }

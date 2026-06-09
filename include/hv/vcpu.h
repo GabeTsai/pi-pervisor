@@ -18,6 +18,7 @@ typedef enum {
 typedef struct { 
     HypExceptState hyp_state; // saved return frame 
     HypBankedRegs banked_regs; // saved banked lower-mode registers
+    uint32_t vbar; // guest vector base address register
 } HvVcpuContext;
 
 // each guest vCPU thinks it has its own timer

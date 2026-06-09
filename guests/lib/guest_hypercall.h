@@ -28,6 +28,10 @@ static inline void guest_exit(uint32_t status) {
     while (1) {}
 }
 
+static inline void guest_yield(void) {
+    guest_hypercall0(HYPERCALL_YIELD);
+}
+
 static inline void guest_putchar(uint8_t c) {
     guest_hypercall1(HYPERCALL_PUTCHAR, (uint32_t)c);
 }

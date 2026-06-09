@@ -5,7 +5,7 @@
 #include "vcpu.h"
 #include "hyp-exceptions.h"
 
-#define HV_MAX_GUEST_VCPUS 1
+#define HV_MAX_GUEST_VCPUS 2
 #define HV_IDLE_VCPU_IDX HV_MAX_GUEST_VCPUS
 #define HV_MAX_VCPUS (HV_MAX_GUEST_VCPUS + 1)
 #define HV_IDLE_VCPU_ID 0xffffffffu

@@ -113,4 +113,20 @@
     - Added periodic virtual timer for each vCPU based that uses the BCM physical timer IRQ path 
     - Basically, setup all the infra necessary for context switching between guests that are using interrupts
     - TODO: 2/3 guest test - first test with interleaved prints, second test with virtual timers enabled, testing both of their virtual timer interrupts
+    - TODO: MMU (say wallahi bro)
+
+- **6/8/26**
+    - Added interleaving test with no interrupts enabled that shows two guests alternating between prints. 
+    - Added timer interrupt test that has two guests with virtual timer interrupts enabled. Both guests use their IRQ handler to increment a counter and return when the counter reaches a certain value
+        - Encountered an issue where guest 1 finished incrementing its counter but guest 0 wouldn't increment its own counter and hung while guest 1 exited. 
+        - Root cause: not saving/restoring VBAR properly. 
+        - VBAR is a CPU register so it is shared by the two guests. 
+        - Without saving/restoring, whichever guest ran last owns the physical VBAR. Below details the bugged execution path:
+            1. Hypervisor schedules vCPU 0 
+            2. virtual IRQ injected into EL1, with the CPU using the stale guest 1 VBAR, so it jumps to guest 1's IRQ vector/code 
+            3. guest 1 calls guest_virq_claim() 
+            4. guest 1 is already done so the hypervisor lets guest 1's handler claim vCPU 0's timer IRQ
+            5. incrementing guest 1's timer ticks 
+            6. return back to guest 0's interrupted PC 
+            7. guest 0 goes back to wfi since counter wasn't incremented
 

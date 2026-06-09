@@ -50,6 +50,7 @@ HypExceptAction handle_unknown(HypExceptState *hyp_state);
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state);
 HypExceptAction handle_hvc_from_hyp(HypExceptState *hyp_state);
 HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state);
+HypExceptAction handle_guest_abort(HypExceptState *hyp_state);
 HypExceptAction handle_prefetch_abort(HypExceptState *hyp_state);
 HypExceptAction handle_data_abort(HypExceptState *hyp_state);
 HypExceptAction handle_lower_sync(HypExceptState *hyp_state);

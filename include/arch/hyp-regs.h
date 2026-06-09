@@ -12,6 +12,8 @@
 #define HSR_ISS_SHIFT 0
 #define HSR_ISS_MASK  0x01ffffff
 #define HSR_ISS(hsr)  (((hsr) >> HSR_ISS_SHIFT) & HSR_ISS_MASK)
+// ISS for data/prefetch abort contains fault status code in lower 6 bits 
+#define HSR_ISS_FAULT_STATUS_MASK 0x3f 
 
 #define HYP_BANKED_SP_USR    0
 #define HYP_BANKED_SP_SVC    4
@@ -70,12 +72,29 @@ typedef struct {
     uint32_t spsr_irq;
 } HypBankedRegs;
 
+#define VTTBR_VMID_SHIFT 48u
+#define VTTBR_VMID_MASK  0xffull
+#define VTTBR_BADDR_MASK 0x000000fffffff000ull
+
 uint32_t read_hcr(void);
 void write_hcr(uint32_t value);
 void set_hcr_bit(uint32_t bit);
 void clear_hcr_bit(uint32_t bit);
 uint32_t read_vbar(void);
 void write_vbar(uint32_t value);
+uint32_t read_vtcr(void);
+void write_vtcr(uint32_t value);
+uint64_t read_vttbr(void);
+void write_vttbr(uint64_t value);
+
+// G6.2.132 - TLB Invalidate All, Non-Secure Non-Hyp
+// Invalidates all cached copies of translation table entries from TLBs for any level of the translation table walk 
+// required for stage 1 or 2.
+void hyp_invalidate_stage2_tlb_all(void);
+// G6.2.136 - TLB Invalidate by Intermediate Physical Address, Stage 2
+// Stricter TLB invalidation 
+void hyp_invalidate_stage2_tlb_ipa(uint64_t ipa);
+
 static inline void hyp_enable_irq_routing(void) {
     set_hcr_bit(HCR_IMO);
 }

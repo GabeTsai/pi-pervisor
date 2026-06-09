@@ -1,5 +1,8 @@
 #include "hv/scheduler.h"
+#include "check.h"
+#include "hv/guest-image.h"
 #include "hv/hypercall.h"
+#include "hv/mmu.h"
 #include "hv/virq.h"
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
@@ -32,9 +35,29 @@ void hv_scheduler_init(HvScheduler *scheduler) {
 
     for (uint32_t i = 0; i < HV_MAX_VCPUS; i++) {
         scheduler->vcpus[i].id = i;
+        scheduler->vcpus[i].vm = 0;
         scheduler->vcpus[i].state = HV_VCPU_IDLE;
         scheduler->vcpus[i].virq_pending = 0;
         scheduler->vcpus[i].virq_active = 0;
+    }
+
+    int vm_res = hv_vm_init(&scheduler->vms[0],
+                            1,
+                            GUEST_BASE,
+                            GUEST_SLOT_SIZE,
+                            GUEST_BASE,
+                            GUEST_SLOT_SIZE);
+    assert(vm_res == HV_VM_OK, "failed to initialize guest VM");
+
+    int map_res = hv_stage2_map_region(&scheduler->vms[0],
+                                       GUEST_BASE,
+                                       GUEST_BASE,
+                                       GUEST_SLOT_SIZE - HV_STAGE2_PAGE_SIZE,
+                                       HV_STAGE2_PAGE_NORMAL_NC_RW);
+    assert(map_res == HV_STAGE2_OK, "failed to map guest stage-2 window");
+
+    for (uint32_t i = 0; i < HV_MAX_GUEST_VCPUS; i++) {
+        scheduler->vcpus[i].vm = &scheduler->vms[0];
     }
 
     hv_vcpu_init(&scheduler->vcpus[HV_IDLE_VCPU_IDX],
@@ -128,6 +151,7 @@ HypExceptAction hv_scheduler_switch_to(HvScheduler *scheduler, HypExceptState *h
     scheduler->cur_vcpu = next;
 
     hv_scheduler_sync_traps(next_idx);
+    hv_mmu_activate_vcpu(next);
     hv_vcpu_load(next, hyp_state);
     // clear HCR.VI if no pending virqs, otherwise set it
     hv_virq_sync(next);
@@ -194,6 +218,7 @@ HypExceptAction hv_scheduler_enter_idle(HvScheduler *scheduler, HypExceptState *
         scheduler->vcpus[HV_IDLE_VCPU_IDX].state = HV_VCPU_RUNNING;
         scheduler->cur_idx = HV_IDLE_VCPU_IDX;
         hv_scheduler_sync_traps(HV_IDLE_VCPU_IDX);
+        hv_mmu_activate_vcpu(&scheduler->vcpus[HV_IDLE_VCPU_IDX]);
         hv_virq_sync(&scheduler->vcpus[HV_IDLE_VCPU_IDX]);
         return HYP_ACTION_RETURN;
     }

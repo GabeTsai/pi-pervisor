@@ -133,5 +133,19 @@
     - Improved accuracy of guest timer delays:
         - Instead of polling every n microseconds for interrupts using the BCM Timer IRQ, the hyp arms the BCM timer to the earliest vCPU deadline. This makes the physical IRQ happen closest to the exact virtual deadline instead of the next fixed tick
             - Added function `hv_vtimer_rearm_physical` to scan guest vCPUs for earliest virtual timer deadline and arm the BCM timer accordingly
-            - Added small utiltiy function `TIM_Arm_Usec` that programs the ARM timer to fire once after n microseconds pass
+            - Added small utility function `TIM_Arm_Usec` that programs the ARM timer to fire once after n microseconds pass
+
+- **6/9/26**
+    - Added initial stage-2 MMU infrastructure around a VM-owned address space:     
+        - HvVm now owns the stage-2 state, guest vCPUs reference a VM, and the scheduler initializes one static VM for the current guest setup. 
+        - Stage-2 uses VMSAv8-32 long descriptors with a static 4 KiB-aligned table pool, L1/L2/L3 table walks, 4 KiB page mappings only, normal non-cacheable RW guest RAM mappings.
+        - Stage-2 page table translates guest physical addresses back to the same real physical addresses for guest RAM range for now
+            -  Left final 4 KiB page of GUEST_SLOT_SIZE unmapped as a guard page.
+        - Added VTCR/VTTBR/TLBI helpers and stage-2 activation on vCPU entry/switch, with idle vCPUs clearing HCR_VM/disabling stage 2 address translation.
+        - Added lower-mode stage-2 abort handling for data/prefetch aborts
+        - Upon abort, guests optionally log critical state/registers/reconstructed IPA, mark current vCPU exited and advance the scheduler. 
+    - Tested above new code with test: 
+        - Guest prints from mapped RAM, touches guard page at 0x2f000, takes a data abort from EL1 to EL2 
+
+
 

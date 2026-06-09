@@ -5,6 +5,8 @@
 #include "hyp-exceptions.h"
 #include "hyp-regs.h"
 
+struct HvVm;
+
 typedef enum { 
     HV_VCPU_IDLE, // not running, not ready to run
     HV_VCPU_RUNNABLE, // not running, ready to run
@@ -30,6 +32,7 @@ typedef struct {
 
 typedef struct { 
     uint32_t id;
+    struct HvVm *vm;
     HvVcpuState state;
     HvVcpuContext context;
     uint32_t virq_pending;

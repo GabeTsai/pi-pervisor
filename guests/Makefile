@@ -21,7 +21,8 @@ COMMON_OBJS := $(patsubst %.S,$(BUILD_DIR)/%.o,$(COMMON_S_SRCS))
 COMMON_OBJS += $(BUILD_DIR)/lib/printk.o $(BUILD_DIR)/repo/src/lib/printk_format.o
 GUEST_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/main.o
 GUEST_VIRQ_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/virq-main.o
-DEPS := $(GUEST_OBJS:.o=.d) $(GUEST_VIRQ_OBJS:.o=.d)
+GUEST_STAGE2_FAULT_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/stage2-fault-main.o
+DEPS := $(GUEST_OBJS:.o=.d) $(GUEST_VIRQ_OBJS:.o=.d) $(GUEST_STAGE2_FAULT_OBJS:.o=.d)
 
 CPPFLAGS := -I../include -I../include/arch -I../include/hv -I../include/lib -Ilib -MMD -MP
 CFLAGS := -O2 -Wall -Wextra -Werror -ffreestanding -nostdlib -nostartfiles
@@ -38,6 +39,9 @@ guest.bin: $(BUILD_DIR)/guest.elf
 guest-virq.bin: $(BUILD_DIR)/guest-virq.elf
 	$(OBJCOPY) $< -O binary $@
 
+guest-stage2-fault.bin: $(BUILD_DIR)/guest-stage2-fault.elf
+	$(OBJCOPY) $< -O binary $@
+
 $(BUILD_DIR)/guest.elf: $(GUEST_OBJS) linker.ld
 	$(CC) $(CFLAGS) $(GUEST_OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/guest.map -o $@
 	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest.list
@@ -45,6 +49,10 @@ $(BUILD_DIR)/guest.elf: $(GUEST_OBJS) linker.ld
 $(BUILD_DIR)/guest-virq.elf: $(GUEST_VIRQ_OBJS) linker.ld
 	$(CC) $(CFLAGS) $(GUEST_VIRQ_OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/guest-virq.map -o $@
 	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest-virq.list
+
+$(BUILD_DIR)/guest-stage2-fault.elf: $(GUEST_STAGE2_FAULT_OBJS) linker.ld
+	$(CC) $(CFLAGS) $(GUEST_STAGE2_FAULT_OBJS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/guest-stage2-fault.map -o $@
+	$(OBJDUMP) -D $@ > $(BUILD_DIR)/guest-stage2-fault.list
 
 define GUEST_SCHED_RULES
 GUEST_SCHED$(1)_OBJS := $$(COMMON_OBJS) $$(BUILD_DIR)/sched$(1)/sched-main.o

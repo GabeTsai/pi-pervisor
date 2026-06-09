@@ -98,6 +98,8 @@ static const uint64_t valid_hsr_ec[] = {
     [HYP_EXCEPTION_LOWER_SYNC] =
         EC_BIT(HSR_EC_HVC_A32) |
         EC_BIT(HSR_EC_WFI_WFE) |
+        EC_BIT(HSR_EC_PREFETCH_ABORT_LOWER) |
+        EC_BIT(HSR_EC_DATA_ABORT_LOWER) |
         EC_BIT(HSR_EC_CP15_MCR_MRC) |
         EC_BIT(HSR_EC_CP15_MCRR_MRRC) |
         EC_BIT(HSR_EC_CP14_MCR_MRC) |
@@ -195,6 +197,37 @@ HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) {
     return hyp_handle_guest_hypercall(hyp_state);
 }
 
+HypExceptAction handle_guest_abort(HypExceptState *hyp_state) {
+    HvVcpu *vcpu = hv_scheduler_get_current(&scheduler);
+    uint32_t iss = HSR_ISS(hyp_state->hsr);
+    uint32_t status = iss & HSR_ISS_FAULT_STATUS_MASK;
+    uint64_t fault_ipa = ((uint64_t)(hyp_state->hpfar & 0xfffffff0u)) << 8;
+
+    if (hyp_except_verbose) {
+        trace("Guest abort: ec=%d (%s) iss=%p status=%p\n",
+            HSR_EC(hyp_state->hsr),
+            hsr_ec_name(HSR_EC(hyp_state->hsr)),
+            iss,
+            status);
+        trace("Guest abort regs: elr=%p hdfar=%p hifar=%p hpfar=%p ipa_hi=%p ipa_lo=%p\n",
+            hyp_state->elr_hyp,
+            hyp_state->hdfar,
+            hyp_state->hifar,
+            hyp_state->hpfar,
+            (uint32_t)(fault_ipa >> 32),
+            (uint32_t)fault_ipa);
+    }
+    
+    if (vcpu == 0 || hv_scheduler_is_idle_vcpu(vcpu)) {
+        return HYP_ACTION_HALT;
+    }
+    // on aborts, we mark the vCPU as exited, rearm the timer and advance the scheduler
+    hv_vcpu_timer_disable(vcpu);
+    vcpu->state = HV_VCPU_EXITED;
+    hv_vtimer_rearm_physical(&scheduler);
+    return hv_scheduler_advance(&scheduler, hyp_state);
+}
+
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 
     hyp_dump_unexpected_exception_state(hyp_state);
     trace("Undefined instruction in Hyp\n");
@@ -235,6 +268,9 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
                 return HYP_ACTION_HALT;
             }
             return hv_scheduler_handle_wfi(&scheduler, hyp_state);
+        case HSR_EC_PREFETCH_ABORT_LOWER:
+        case HSR_EC_DATA_ABORT_LOWER:
+            return handle_guest_abort(hyp_state);
         case HSR_EC_CP15_MCR_MRC:
         default:
             hyp_dump_unexpected_exception_state(hyp_state);

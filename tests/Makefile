@@ -28,6 +28,7 @@ TESTS := \
 	test-guest-sched-virq-image \
 	test-guest-sched-yield \
 	test-guest-sched-timer \
+	test-guest-stage2-fault \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -61,8 +62,11 @@ REPO_C_SRCS := \
 	$(ROOT)/src/platform/platform.c \
 	$(ROOT)/src/hv/hypercall.c \
 	$(ROOT)/src/hv/scheduler.c \
+	$(ROOT)/src/hv/mmu.c \
+	$(ROOT)/src/hv/stage2.c \
 	$(ROOT)/src/hv/vcpu.c \
-	$(ROOT)/src/hv/virq.c
+	$(ROOT)/src/hv/virq.c \
+	$(ROOT)/src/hv/vm.c
 REPO_S_SRCS := \
 	$(ROOT)/src/boot/start.S \
 	$(ROOT)/src/arch/hyp-vectors.S \
@@ -147,6 +151,9 @@ TEST_EXTRA_OBJS_test-guest-sched-yield := \
 TEST_EXTRA_OBJS_test-guest-sched-timer := \
 	build/tests/test-guest-sched-timer/test/test-guest-sched-timer.S.o
 
+TEST_EXTRA_OBJS_test-guest-stage2-fault := \
+	build/tests/test-guest-stage2-fault/test/test-guest-stage2-fault.S.o
+
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
 build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-lower.S
@@ -177,6 +184,10 @@ build/tests/test-guest-sched-timer/test/test-guest-sched-timer.S.o: test-guest-s
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
+build/tests/test-guest-stage2-fault/test/test-guest-stage2-fault.S.o: test-guest-stage2-fault.S $(ROOT)/guests/guest-stage2-fault.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
 $(ROOT)/guests/guest.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
@@ -194,6 +205,9 @@ $(ROOT)/guests/guest-timer0.bin: FORCE
 
 $(ROOT)/guests/guest-timer1.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest-timer1.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-stage2-fault.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-stage2-fault.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)

@@ -1,10 +1,12 @@
 #include "hv/vcpu.h"
+#include "hv/mmu.h"
 #include "hyp-enter-vcpu.h"
 #include "hyp-regs.h"
 
 #define HV_TIMER_TICKS_PER_SEC 1000000u
 
 void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stack_top, uint32_t cpsr) {
+    struct HvVm *vm = vcpu->vm;
     uint32_t *field = (uint32_t *)vcpu;
 
     for (uint32_t i = 0; i < sizeof(*vcpu) / sizeof(uint32_t); i++) {
@@ -12,6 +14,7 @@ void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stac
     }
 
     vcpu->id = id;
+    vcpu->vm = vm;
     vcpu->state = HV_VCPU_RUNNABLE;
     vcpu->virq_pending = 0;
     vcpu->virq_active = 0;
@@ -24,6 +27,7 @@ void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stac
 }
 
 void hv_vcpu_enter_initial(HvVcpu *vcpu) {
+    hv_mmu_activate_vcpu(vcpu);
     hyp_enter_vcpu_context(&vcpu->context.hyp_state, &vcpu->context.banked_regs);
 }
 

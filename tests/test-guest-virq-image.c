@@ -35,14 +35,11 @@ void main(void) {
     hv_virq_init(&virq_controller);
 
     TIM_Clear_Pending();
-    TIM_Enable();
-    TIM_Set_Frequency(GUEST_TIMER_HZ);
-    TIM_Clear_Pending();
-    TIM_Enable_IRQ();
 
     hv_vcpu_timer_start_periodic(scheduler.cur_vcpu,
                                  TIM_SYS_Get_Ticks(),
                                  USEC_PER_SEC / GUEST_TIMER_HZ);
+    hv_vtimer_rearm_physical(&scheduler);
 
     hyp_enable_irq_routing();
 

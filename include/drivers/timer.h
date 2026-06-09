@@ -11,6 +11,15 @@
 
 #define IRQ_EN_BIT 5
 #define EN_BIT 7
+#define TIM_ARM_TIMER_CLOCK_RATE 250000000
+#define TIM_LOAD_MAX 0x7fffff
+
+// timer ticks at 250MHz / 256 ticks per second.
+// Period, or seconds per tick, is the inverse of that at about 1.024 us
+#define TIM_ARM_TIMER_PRESCALE 256
+#define TIM_ARM_TIMER_MAX_DELTA_US \
+    ((uint32_t)(((uint64_t)TIM_LOAD_MAX * TIM_ARM_TIMER_PRESCALE) / \
+                (TIM_ARM_TIMER_CLOCK_RATE / 1000000u)))
 
 enum {
     TIM_LOAD = TIM_BASE + 0x400,
@@ -58,6 +67,7 @@ bool TIM_Pending(void);
 void TIM_Clear_Pending(void);
 void TIM_Set_Frequency(uint32_t hz);
 void TIM_Set_Load(uint32_t value);
+void TIM_Arm_Usec(uint32_t delta_us);
 void TIM_Enable(void); // also does config
 void TIM_Disable(void);
 void TIM_Enable_IRQ(void);

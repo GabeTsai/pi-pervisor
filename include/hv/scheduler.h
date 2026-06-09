@@ -37,3 +37,6 @@ HypExceptAction hv_scheduler_handle_wfi(HvScheduler *scheduler, HypExceptState *
 
 // enter dummy/synthetic vCPU when no real guest vCPU is runnable
 HypExceptAction hv_scheduler_enter_idle(HvScheduler *scheduler, HypExceptState *hyp_state);
+
+// Arm the BCM timer for the earliest enabled guest virtual timer deadline.
+void hv_vtimer_rearm_physical(HvScheduler *scheduler);

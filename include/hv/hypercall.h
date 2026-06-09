@@ -29,6 +29,9 @@
 #define HYPERCALL_GET_HYP_IRQ_COUNT 6
 #define HYPERCALL_VIRQ_CLAIM        7
 #define HYPERCALL_VIRQ_COMPLETE     8
+#define HYPERCALL_TIMER_GET_TICKS   9
+#define HYPERCALL_TIMER_DELAY_TICKS 10
+#define HYPERCALL_TIMER_GET_FREQ    11
 
 // guest exit statuses passed from guest to hypervisor
 #define HYP_GUEST_EXIT_SUCCESS 0

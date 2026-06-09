@@ -49,3 +49,23 @@ static inline int guest_virq_claim(void) {
 static inline int guest_virq_complete(int virq) {
     return (int32_t)guest_hypercall1(HYPERCALL_VIRQ_COMPLETE, (uint32_t)virq);
 }
+
+static inline uint32_t guest_timer_get_ticks(void) {
+    return guest_hypercall0(HYPERCALL_TIMER_GET_TICKS);
+}
+
+static inline uint32_t guest_timer_get_frequency(void) {
+    return guest_hypercall0(HYPERCALL_TIMER_GET_FREQ);
+}
+
+static inline int guest_timer_delay_micros(uint32_t us) {
+    return (int32_t)guest_hypercall1(HYPERCALL_TIMER_DELAY_TICKS, us);
+}
+
+static inline int guest_timer_delay_millis(uint32_t ms) {
+    if (ms > UINT32_MAX / 1000u) {
+        return HYPERCALL_ERR_INVALID;
+    }
+
+    return guest_timer_delay_micros(ms * 1000u);
+}

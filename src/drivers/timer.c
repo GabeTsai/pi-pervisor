@@ -23,11 +23,35 @@ void TIM_Disable_IRQ(void) {
 }
 
 void TIM_Set_Frequency(uint32_t hz) {
-    TIM_Set_Load(ARM_CLOCK_RATE / hz);
+    TIM_Set_Load(TIM_ARM_TIMER_CLOCK_RATE / hz);
 }
 
 void TIM_Set_Load(uint32_t count) {
     PUT32(TIM_LOAD, count);
+}
+
+void TIM_Arm_Usec(uint32_t delta_us) {
+    uint64_t timer_ticks = ((uint64_t)delta_us * (TIM_ARM_TIMER_CLOCK_RATE / 1000000u) +
+                            TIM_ARM_TIMER_PRESCALE - 1) >> 8;
+    // avoid division by 0 error
+    if (timer_ticks == 0) {
+        timer_ticks = 1;
+    } else if (timer_ticks > TIM_LOAD_MAX) {
+        timer_ticks = TIM_LOAD_MAX;
+    }
+
+    TIM_Disable_IRQ();
+    PUT32(TIM_CTRL, 0);
+    TIM_Clear_Pending();
+
+    PUT32(TIM_PREDIVIDER, 0);
+    PUT32(TIM_RELOAD, 0);
+    PUT32(TIM_LOAD, (uint32_t)timer_ticks);
+    PUT32(TIM_CTRL, TIM_CTRL_TIMER_INTERRUPT |
+                    TIM_CTRL_TIMER_ENABLE |
+                    TIM_CTRL_23BIT_COUNTER |
+                    TIM_CTRL_PRESCALE_256);
+    TIM_Enable_IRQ();
 }
 
 bool TIM_Check_IRQ(void){

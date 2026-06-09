@@ -4,6 +4,7 @@
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
 #include "panic.h"
+#include "timer.h"
 
 HvScheduler scheduler;
 bool hv_scheduler_verbose;
@@ -198,4 +199,38 @@ HypExceptAction hv_scheduler_enter_idle(HvScheduler *scheduler, HypExceptState *
     }
 
     return hv_scheduler_switch_to(scheduler, hyp_state, HV_IDLE_VCPU_IDX);
+}
+
+void hv_vtimer_rearm_physical(HvScheduler *scheduler) {
+    bool found = false;
+    uint64_t earliest = 0;
+
+    for (uint32_t i = 0; i < HV_MAX_GUEST_VCPUS; i++) {
+        HvVcpu *vcpu = &scheduler->vcpus[i];
+
+        if (vcpu->state == HV_VCPU_IDLE ||
+            vcpu->state == HV_VCPU_EXITED ||
+            !vcpu->timer.enabled) {
+            continue;
+        }
+
+        if (!found || vcpu->timer.deadline < earliest) {
+            earliest = vcpu->timer.deadline;
+            found = true;
+        }
+    }
+
+    if (!found) {
+        TIM_Disable_IRQ();
+        return;
+    }
+
+    uint64_t now = TIM_SYS_Get_Ticks();
+    uint64_t delta = earliest > now ? earliest - now : 1;
+
+    if (delta > TIM_ARM_TIMER_MAX_DELTA_US) {
+        delta = TIM_ARM_TIMER_MAX_DELTA_US;
+    }
+
+    TIM_Arm_Usec((uint32_t)delta);
 }

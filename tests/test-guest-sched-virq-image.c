@@ -39,10 +39,6 @@ void main(void) {
     hv_scheduler_verbose = false;
 
     TIM_Clear_Pending();
-    TIM_Enable();
-    TIM_Set_Frequency(GUEST_TIMER_HZ);
-    TIM_Clear_Pending();
-    TIM_Enable_IRQ();
 
     GEN_TIM_init(100);
     GEN_TIM_enable();
@@ -54,6 +50,7 @@ void main(void) {
     hv_vcpu_timer_start_periodic(boot_vcpu,
                                  TIM_SYS_Get_Ticks(),
                                  USEC_PER_SEC / GUEST_TIMER_HZ);
+    hv_vtimer_rearm_physical(&scheduler);
 
     scheduler.cur_idx = 0;
     scheduler.cur_vcpu = boot_vcpu;

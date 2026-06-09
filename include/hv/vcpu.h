@@ -46,5 +46,7 @@ void hv_vcpu_timer_start_periodic(HvVcpu *vcpu, uint64_t now, uint64_t period);
 void hv_vcpu_timer_disable(HvVcpu *vcpu);
 bool hv_vcpu_timer_expired(HvVcpu *vcpu, uint64_t now);
 void hv_vcpu_timer_advance(HvVcpu *vcpu, uint64_t now);
+void hv_vcpu_timer_delay(HvVcpu *vcpu, uint64_t now, uint64_t delay_ticks);
+uint32_t hv_vcpu_timer_get_frequency(HvVcpu *vcpu);
 void hv_vcpu_save(HvVcpu *vcpu, HypExceptState *hyp_state);
 void hv_vcpu_load(HvVcpu *vcpu, HypExceptState *hyp_state);

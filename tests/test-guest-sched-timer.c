@@ -87,10 +87,6 @@ void main(void) {
     hv_scheduler_verbose = false;
 
     TIM_Clear_Pending();
-    TIM_Enable();
-    TIM_Set_Frequency(GUEST_TIMER_HZ);
-    TIM_Clear_Pending();
-    TIM_Enable_IRQ();
 
     GEN_TIM_init(100);
     GEN_TIM_enable();
@@ -98,6 +94,7 @@ void main(void) {
     hyp_enable_irq_routing();
 
     init_guest_vcpus();
+    hv_vtimer_rearm_physical(&scheduler);
 
     hv_vcpu_enter_initial(&scheduler.vcpus[0]);
 

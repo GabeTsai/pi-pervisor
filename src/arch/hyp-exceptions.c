@@ -129,6 +129,8 @@ static bool deliver_expired_timers(uint64_t now) {
 
         int res = hv_virq_raise(vcpu, VIRQ_TIMER);
         if (res == HV_VIRQ_ERR_BUSY) {
+            hv_vcpu_timer_advance(vcpu, now);
+            delivered = true;
             continue;
         }
 
@@ -259,6 +261,7 @@ HypExceptAction handle_irq(HypExceptState *hyp_state) {
         uint64_t now = TIM_SYS_Get_Ticks();
         // signal guest virtual timers
         bool delivered = deliver_expired_timers(now);
+        hv_vtimer_rearm_physical(&scheduler);
         if (!delivered) {
             if (hv_scheduler_is_idle_vcpu(hv_scheduler_get_current(&scheduler))) {
                 return hv_scheduler_advance(&scheduler, hyp_state);

@@ -2,6 +2,8 @@
 #include "hyp-enter-vcpu.h"
 #include "hyp-regs.h"
 
+#define HV_TIMER_TICKS_PER_SEC 1000000u
+
 void hv_vcpu_init(HvVcpu *vcpu, uint32_t id, uint32_t entry_point, uint32_t stack_top, uint32_t cpsr) {
     uint32_t *field = (uint32_t *)vcpu;
 
@@ -78,6 +80,25 @@ void hv_vcpu_timer_advance(HvVcpu *vcpu, uint64_t now) {
     do {
         vcpu->timer.deadline += vcpu->timer.period;
     } while (now >= vcpu->timer.deadline);
+}
+
+void hv_vcpu_timer_delay(HvVcpu *vcpu, uint64_t now, uint64_t delay_ticks) {
+    if (vcpu == 0 || delay_ticks == 0) {
+        return;
+    }
+
+    vcpu->timer.enabled = true;
+    vcpu->timer.deadline = now + delay_ticks;
+
+    hv_vcpu_block(vcpu);
+}
+
+uint32_t hv_vcpu_timer_get_frequency(HvVcpu *vcpu) {
+    if (vcpu == 0 || !vcpu->timer.enabled || vcpu->timer.period == 0) {
+        return 0;
+    }
+
+    return HV_TIMER_TICKS_PER_SEC / (uint32_t)vcpu->timer.period;
 }
 
 static void copy_hyp_state(HypExceptState *dst, const HypExceptState *src) {

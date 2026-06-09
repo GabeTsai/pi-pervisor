@@ -9,6 +9,7 @@
 #endif
 
 #define GUEST_TIMER_TARGET_TICKS 100
+#define USEC_PER_SEC 1000000u
 
 volatile uint32_t guest_timer_ticks;
 
@@ -33,13 +34,24 @@ void guest_main(void)
         guest_exit(HYP_GUEST_EXIT_FAILURE);
     }
 
+    uint32_t timer_hz = guest_timer_get_frequency();
+    if (timer_hz == 0) {
+        guest_exit(HYP_GUEST_EXIT_FAILURE);
+    }
+
     clear_cpsr_bit(CPSR_I);
 
     printk("guest %d: timer start\n", GUEST_ID);
+    uint32_t start = guest_timer_get_ticks();
+    guest_timer_delay_millis(2000);
+    uint32_t end = guest_timer_get_ticks();
+    printk("guest %d: delay elapsed %d us\n", GUEST_ID, end - start);
+
     while (guest_timer_ticks < GUEST_TIMER_TARGET_TICKS) {
         asm volatile ("wfi" ::: "memory");
     }
 
-    printk("guest %d: timer done %d\n", GUEST_ID, guest_timer_ticks);
+    end = guest_timer_get_ticks();
+    printk("guest %d: timer done %d in %d us\n", GUEST_ID, guest_timer_ticks, end - start);
     guest_exit(HYP_GUEST_EXIT_SUCCESS);
 }

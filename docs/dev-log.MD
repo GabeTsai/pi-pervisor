@@ -129,4 +129,9 @@
             5. incrementing guest 1's timer ticks 
             6. return back to guest 0's interrupted PC 
             7. guest 0 goes back to wfi since counter wasn't incremented
+    - Added guest hypercall timer delay/get_ticks/get_freq functions, tested them in the guest timer test
+    - Improved accuracy of guest timer delays:
+        - Instead of polling every n microseconds for interrupts using the BCM Timer IRQ, the hyp arms the BCM timer to the earliest vCPU deadline. This makes the physical IRQ happen closest to the exact virtual deadline instead of the next fixed tick
+            - Added function `hv_vtimer_rearm_physical` to scan guest vCPUs for earliest virtual timer deadline and arm the BCM timer accordingly
+            - Added small utiltiy function `TIM_Arm_Usec` that programs the ARM timer to fire once after n microseconds pass
 

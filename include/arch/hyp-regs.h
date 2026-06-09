@@ -14,6 +14,10 @@
 #define HSR_ISS(hsr)  (((hsr) >> HSR_ISS_SHIFT) & HSR_ISS_MASK)
 // ISS for data/prefetch abort contains fault status code in lower 6 bits 
 #define HSR_ISS_FAULT_STATUS_MASK 0x3f 
+#define HSR_ISS_ABORT_WNR         (1u << 6)
+#define HSR_ISS_ABORT_S1PTW       (1u << 7)
+#define HSR_ISS_ABORT_FNV         (1u << 10)
+#define HSR_ISS_ABORT_ISV         (1u << 24)
 
 #define HYP_BANKED_SP_USR    0
 #define HYP_BANKED_SP_SVC    4

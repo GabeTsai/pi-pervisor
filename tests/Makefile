@@ -29,6 +29,7 @@ TESTS := \
 	test-guest-sched-yield \
 	test-guest-sched-timer \
 	test-guest-stage2-fault \
+	test-hv-vm-stage2 \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -62,6 +63,7 @@ REPO_C_SRCS := \
 	$(ROOT)/src/platform/platform.c \
 	$(ROOT)/src/hv/hypercall.c \
 	$(ROOT)/src/hv/scheduler.c \
+	$(ROOT)/src/hv/mmio.c \
 	$(ROOT)/src/hv/mmu.c \
 	$(ROOT)/src/hv/stage2.c \
 	$(ROOT)/src/hv/vcpu.c \

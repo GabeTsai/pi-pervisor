@@ -34,6 +34,7 @@ void hv_scheduler_init(HvScheduler *scheduler) {
     scheduler->cur_idx = 0;
 
     for (uint32_t i = 0; i < HV_MAX_VCPUS; i++) {
+        // init vCPU scheduler params to idle
         scheduler->vcpus[i].id = i;
         scheduler->vcpus[i].vm = 0;
         scheduler->vcpus[i].state = HV_VCPU_IDLE;
@@ -41,23 +42,45 @@ void hv_scheduler_init(HvScheduler *scheduler) {
         scheduler->vcpus[i].virq_active = 0;
     }
 
-    int vm_res = hv_vm_init(&scheduler->vms[0],
-                            1,
-                            GUEST_BASE,
-                            GUEST_SLOT_SIZE,
-                            GUEST_BASE,
-                            GUEST_SLOT_SIZE);
-    assert(vm_res == HV_VM_OK, "failed to initialize guest VM");
-
-    int map_res = hv_stage2_map_region(&scheduler->vms[0],
-                                       GUEST_BASE,
-                                       GUEST_BASE,
-                                       GUEST_SLOT_SIZE - HV_STAGE2_PAGE_SIZE,
-                                       HV_STAGE2_PAGE_NORMAL_NC_RW);
-    assert(map_res == HV_STAGE2_OK, "failed to map guest stage-2 window");
-
     for (uint32_t i = 0; i < HV_MAX_GUEST_VCPUS; i++) {
-        scheduler->vcpus[i].vm = &scheduler->vms[0];
+        int vm_res = hv_vm_init(&scheduler->vm[i],
+                                i,
+                                i);
+        assert(vm_res == HV_VM_OK, "failed to initialize guest VM");
+
+        HvVmRegion ram_region = {
+            .ipa_base = GUEST_BASE,
+            .size = GUEST_SLOT_SIZE - HV_STAGE2_PAGE_SIZE,
+            .pa_base = GUEST_SLOT_BASE(i),
+            .attrs = HV_STAGE2_PAGE_NORMAL_NC_RW,
+            .type = HV_VM_REGION_RAM,
+        };
+        vm_res = hv_vm_add_region(&scheduler->vm[i], &ram_region);
+        assert(vm_res == HV_VM_OK, "failed to add guest RAM region");
+
+        HvVmRegion guard_region = {
+            .ipa_base = GUEST_BASE + GUEST_SLOT_SIZE - HV_STAGE2_PAGE_SIZE,
+            .size = HV_STAGE2_PAGE_SIZE,
+            .pa_base = 0,
+            .attrs = 0,
+            .type = HV_VM_REGION_RAM_GUARD,
+        };
+        vm_res = hv_vm_add_region(&scheduler->vm[i], &guard_region);
+        assert(vm_res == HV_VM_OK, "failed to add guest guard region");
+
+        vm_res = hv_vm_build_stage2(&scheduler->vm[i]);
+        assert(vm_res == HV_VM_OK, "failed to build guest stage-2 tables");
+
+        if (hv_scheduler_verbose) {
+            trace("vm map id=%d vmid=%d ipa=%p pa=%p root=%p\n",
+                  scheduler->vm[i].id,
+                  scheduler->vm[i].vmid,
+                  (uint32_t)ram_region.ipa_base,
+                  (uint32_t)ram_region.pa_base,
+                  (uint32_t)scheduler->vm[i].stage2.root_pa);
+        }
+        
+        scheduler->vcpus[i].vm = &scheduler->vm[i];
     }
 
     hv_vcpu_init(&scheduler->vcpus[HV_IDLE_VCPU_IDX],

@@ -6,14 +6,13 @@
 #include "hyp-exceptions.h"
 #include "hv/vm.h"
 
-#define HV_MAX_VMS 1
-#define HV_MAX_GUEST_VCPUS 2
+#define HV_MAX_GUEST_VCPUS HV_MAX_VMS
 #define HV_IDLE_VCPU_IDX HV_MAX_GUEST_VCPUS
 #define HV_MAX_VCPUS (HV_MAX_GUEST_VCPUS + 1)
 #define HV_IDLE_VCPU_ID 0xffffffffu
 
 typedef struct HvScheduler { 
-    HvVm vms[HV_MAX_VMS];
+    HvVm vm[HV_MAX_GUEST_VCPUS];
     HvVcpu vcpus[HV_MAX_VCPUS];
     uint32_t cur_idx;
     HvVcpu *cur_vcpu;

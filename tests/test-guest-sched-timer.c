@@ -15,13 +15,6 @@
 #define GUEST_TIMER_HZ 300
 #define USEC_PER_SEC 1000000u
 
-typedef struct {
-    uint32_t id;
-    uint32_t load_base;
-    uint8_t *image_start;
-    uint8_t *image_end;
-} GuestImage;
-
 extern uint8_t guest_timer0_image_start[];
 extern uint8_t guest_timer0_image_end[];
 extern uint8_t guest_timer1_image_start[];

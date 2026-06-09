@@ -3,8 +3,11 @@
 #include "printk.h"
 #include "hyp-regs.h"
 #include "hv/hypercall.h"
+#include "hv/mmio.h"
 #include "hv/scheduler.h"
+#include "hv/stage2.h"
 #include "hv/virq.h"
+#include "hv/vm.h"
 #include "check.h" 
 #include "panic.h"
 #include "aarch32.h"
@@ -197,13 +200,80 @@ HypExceptAction handle_hvc_from_lower(HypExceptState *hyp_state) {
     return hyp_handle_guest_hypercall(hyp_state);
 }
 
+static const char *stage2_access_name(HvStage2Access access) {
+    switch (access) {
+        case HV_STAGE2_ACCESS_READ:
+            return "read";
+        case HV_STAGE2_ACCESS_WRITE:
+            return "write";
+        case HV_STAGE2_ACCESS_INSTRUCTION:
+            return "instruction";
+        default:
+            return "unknown";
+    }
+}
+
+static void decode_stage2_fault(HvVcpu *vcpu,
+                                HypExceptState *hyp_state,
+                                HvStage2FaultInfo *fault) {
+    uint32_t iss = HSR_ISS(hyp_state->hsr);
+    uint32_t ec = HSR_EC(hyp_state->hsr);
+    HvIpa fault_ipa = ((uint64_t)(hyp_state->hpfar & 0xfffffff0u)) << 8;
+    bool is_instruction = ec == HSR_EC_PREFETCH_ABORT_LOWER;
+    bool is_write = !is_instruction && ((iss & HSR_ISS_ABORT_WNR) != 0);
+    bool offset_valid = !is_instruction && ((iss & HSR_ISS_ABORT_FNV) == 0);
+
+    if (offset_valid) {
+        fault_ipa |= hyp_state->hdfar & (HV_STAGE2_PAGE_SIZE - 1u);
+    }
+
+    fault->vcpu_id = vcpu == 0 ? 0xffffffffu : vcpu->id;
+    fault->vm_id = vcpu == 0 || vcpu->vm == 0 ? 0xffffffffu : vcpu->vm->id;
+    fault->ec = ec;
+    fault->iss = iss;
+    fault->status = iss & HSR_ISS_FAULT_STATUS_MASK;
+    fault->level = fault->status & 0x3u;
+    fault->ipa = fault_ipa;
+    fault->is_write = is_write;
+    fault->is_instruction = is_instruction;
+    fault->ipa_offset_valid = offset_valid;
+    fault->access = is_instruction ? HV_STAGE2_ACCESS_INSTRUCTION :
+                    is_write ? HV_STAGE2_ACCESS_WRITE :
+                    HV_STAGE2_ACCESS_READ;
+}
+
+static void log_stage2_fault(const HvStage2FaultInfo *fault, const char *route) {
+    trace("stage2 fault: route=%s vcpu=%d vm=%d ipa=%p access=%s level=%d status=%p iss=%p\n",
+          route,
+          fault->vcpu_id,
+          fault->vm_id,
+          (uint32_t)fault->ipa,
+          stage2_access_name(fault->access),
+          fault->level,
+          fault->status,
+          fault->iss);
+}
+
+static void advance_trapped_guest_instr(HypExceptState *hyp_state) {
+    uint32_t instr_len = HSR_IL(hyp_state->hsr) != 0 ? 4 : 2;
+    hyp_state->elr_hyp += instr_len;
+}
+
+static HypExceptAction stop_current_guest_vcpu(HvVcpu *vcpu, HypExceptState *hyp_state) {
+    hv_vcpu_timer_disable(vcpu);
+    vcpu->state = HV_VCPU_EXITED;
+    hv_vtimer_rearm_physical(&scheduler);
+    return hv_scheduler_advance(&scheduler, hyp_state);
+}
+
 HypExceptAction handle_guest_abort(HypExceptState *hyp_state) {
     HvVcpu *vcpu = hv_scheduler_get_current(&scheduler);
-    uint32_t iss = HSR_ISS(hyp_state->hsr);
-    uint32_t status = iss & HSR_ISS_FAULT_STATUS_MASK;
-    uint64_t fault_ipa = ((uint64_t)(hyp_state->hpfar & 0xfffffff0u)) << 8;
 
     if (hyp_except_verbose) {
+        uint32_t iss = HSR_ISS(hyp_state->hsr);
+        uint32_t status = iss & HSR_ISS_FAULT_STATUS_MASK;
+        uint64_t fault_ipa = ((uint64_t)(hyp_state->hpfar & 0xfffffff0u)) << 8;
+
         trace("Guest abort: ec=%d (%s) iss=%p status=%p\n",
             HSR_EC(hyp_state->hsr),
             hsr_ec_name(HSR_EC(hyp_state->hsr)),
@@ -217,15 +287,48 @@ HypExceptAction handle_guest_abort(HypExceptState *hyp_state) {
             (uint32_t)(fault_ipa >> 32),
             (uint32_t)fault_ipa);
     }
-    
+
     if (vcpu == 0 || hv_scheduler_is_idle_vcpu(vcpu)) {
         return HYP_ACTION_HALT;
     }
-    // on aborts, we mark the vCPU as exited, rearm the timer and advance the scheduler
-    hv_vcpu_timer_disable(vcpu);
-    vcpu->state = HV_VCPU_EXITED;
-    hv_vtimer_rearm_physical(&scheduler);
-    return hv_scheduler_advance(&scheduler, hyp_state);
+
+    HvStage2FaultInfo fault;
+    decode_stage2_fault(vcpu, hyp_state, &fault);
+
+    if (vcpu->vm == 0) {
+        log_stage2_fault(&fault, "no-vm");
+        return HYP_ACTION_HALT;
+    }
+
+    const HvVmRegion *region = hv_vm_find_region(vcpu->vm, fault.ipa);
+    if (region == 0) {
+        log_stage2_fault(&fault, "unexpected-unmapped");
+        return stop_current_guest_vcpu(vcpu, hyp_state);
+    }
+
+    if (region->type == HV_VM_REGION_RAM_GUARD) {
+        log_stage2_fault(&fault, "ram-guard-exit");
+        return stop_current_guest_vcpu(vcpu, hyp_state);
+    }
+
+    if (region->type == HV_VM_REGION_MMIO) {
+        log_stage2_fault(&fault, "mmio");
+        if (hv_mmio_handle_fault(vcpu, &fault) == HV_MMIO_OK) {
+            advance_trapped_guest_instr(hyp_state);
+            return HYP_ACTION_RETURN;
+        }
+        log_stage2_fault(&fault, "mmio-unhandled");
+        return stop_current_guest_vcpu(vcpu, hyp_state);
+    }
+
+    HvPa pa;
+    if (hv_stage2_translate(vcpu->vm, fault.ipa, &pa) != HV_STAGE2_OK) {
+        log_stage2_fault(&fault, "valid-ram-unmapped");
+        return stop_current_guest_vcpu(vcpu, hyp_state);
+    }
+
+    log_stage2_fault(&fault, "unexpected-mapped-ram");
+    return stop_current_guest_vcpu(vcpu, hyp_state);
 }
 
 HypExceptAction handle_undef_instr(HypExceptState *hyp_state) { 
@@ -272,6 +375,12 @@ HypExceptAction handle_lower_sync(HypExceptState *hyp_state) {
         case HSR_EC_DATA_ABORT_LOWER:
             return handle_guest_abort(hyp_state);
         case HSR_EC_CP15_MCR_MRC:
+            hyp_dump_unexpected_exception_state(hyp_state);
+            trace("Unhandled guest CP15 trap: vcpu=%d iss=%p\n",
+                  hv_scheduler_get_current(&scheduler) == 0 ? 0xffffffffu :
+                  hv_scheduler_get_current(&scheduler)->id,
+                  HSR_ISS(hyp_state->hsr));
+            return HYP_ACTION_HALT;
         default:
             hyp_dump_unexpected_exception_state(hyp_state);
             trace("Unhandled lower-level trap in Hyp\n");

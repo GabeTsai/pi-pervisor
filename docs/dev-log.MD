@@ -146,6 +146,19 @@
         - Upon abort, guests optionally log critical state/registers/reconstructed IPA, mark current vCPU exited and advance the scheduler. 
     - Tested above new code with test: 
         - Guest prints from mapped RAM, touches guard page at 0x2f000, takes a data abort from EL1 to EL2 
+        - Modified this test to do true virtualization with two guests running at the same IPA but being mapped to different physical addresses, confirmed that both touch guard page and abort. 
+        - Exact sequence: 
+            - guest 0 runs at IPA 0x20000
+            - guest 0 touches guard page
+            - EL2 handles abort, marks guest 0 exited
+            - scheduler switches prev=0 -> next=1
+            - guest 1 runs at IPA 0x20000
+            - guest 1 touches guard page
+            - EL2 handles abort, marks guest 1 exited
+            - scheduler switches prev=1 -> next=idle
+    - Added much more detailed stage-2 guest abort fault decoding
+    - Changed VM to work in units of regions, VM region types (known ram, guard, mmio)
+    - Added test `test-hv-vm-stage2.c` that tests various VM region/stage2 functionality
 
 
 

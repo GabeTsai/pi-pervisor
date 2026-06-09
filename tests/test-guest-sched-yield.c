@@ -9,13 +9,6 @@
 #include "panic.h"
 #include "uart.h"
 
-typedef struct {
-    uint32_t id;
-    uint32_t load_base;
-    uint8_t *image_start;
-    uint8_t *image_end;
-} GuestImage;
-
 extern uint8_t guest_sched0_image_start[];
 extern uint8_t guest_sched0_image_end[];
 extern uint8_t guest_sched1_image_start[];

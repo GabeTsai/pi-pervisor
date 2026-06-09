@@ -32,6 +32,7 @@ typedef uint64_t HvPa;
 #define HV_STAGE2_ERR_RANGE      -2
 #define HV_STAGE2_ERR_NO_TABLES  -3
 #define HV_STAGE2_ERR_MAPPED     -4
+#define HV_STAGE2_ERR_UNMAPPED   -5
 
 // Lower two bits of the descriptor
 #define HV_STAGE2_DESC_INVALID   0b00ull // invalid descriptor
@@ -94,6 +95,7 @@ typedef uint64_t HvPa;
                                               HV_STAGE2_VTCR_SH0_NON_SHAREABLE)
 
 // table pages come from a hypervisor-owned page-table pool
+// HvStage2 owns page-table root/table allocation state
 typedef struct {
     HvStage2Desc *root_va;
     HvPa root_pa;
@@ -105,7 +107,8 @@ typedef struct {
 
 struct HvVm;
 
-// Initialize stage 2 translation tables for given virtual memory space
+// Initialize stage 2 translation tables for given virtual memory space.
+// V1 uses vm->id as the index into the static stage-2 table pool array.
 int hv_stage2_init(struct HvVm *vm);
 
 /*
@@ -120,3 +123,6 @@ int hv_stage2_map_region(struct HvVm *vm, HvIpa ipa, HvPa pa, uint64_t size, uin
 
 // Unmap page from the virtual memory space
 int hv_stage2_unmap_page(struct HvVm *vm, HvIpa ipa);
+
+// Debug helper to translate a mapped IPA through the VM's stage-2 tables.
+int hv_stage2_translate(struct HvVm *vm, HvIpa ipa, HvPa *pa_out);

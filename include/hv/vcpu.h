@@ -15,12 +15,22 @@ typedef enum {
     HV_VCPU_EXITED, // exited, but can potentially run again
 } HvVcpuState;
 
+typedef struct {
+    uint32_t sctlr;
+    uint64_t ttbr0;
+    uint64_t ttbr1;
+    uint32_t ttbcr;
+    uint32_t dacr;
+    uint32_t vbar;
+} HvGuestSysRegs;
+
 // per-vCPU guest execution context
 // contains saved CPU state needed to resume guest vCPU
 typedef struct { 
     HypExceptState hyp_state; // saved return frame 
     HypBankedRegs banked_regs; // saved banked lower-mode registers
     uint32_t vbar; // guest vector base address register
+    HvGuestSysRegs sys_regs;
 } HvVcpuContext;
 
 // each guest vCPU thinks it has its own timer

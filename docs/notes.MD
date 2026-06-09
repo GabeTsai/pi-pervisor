@@ -537,7 +537,6 @@ After a vCPU is running and takes an exception/trap into Hyp:
   5. Hyp raises VIRQ_TIMER into a selected guest whose deadline time is greater than or equal to current time.
 
 #### ARM Generic Timer
-
 - [https://www.raspberrypi.com/documentation/computers/processors.html](https://www.raspberrypi.com/documentation/computers/processors.html)
 says to use the BCM2836 Arm-local peripherals for ARM peripherals, including the generic timer. 
 - The Cortex uses four central timer control and four central timer status registers. 
@@ -551,3 +550,12 @@ says to use the BCM2836 Arm-local peripherals for ARM peripherals, including the
 - We follow what the Linux irq-bcm2836.c driver does and use the crystal timer for scheduling stability (that way changing the ARM clock doesn't mess up our timings), which gives us a tick rate/period of about 10 ms if we set the clock timer interrupt hz to 100 interrupts per second (timer condition occurs every 192000 counter ticks, or roughly 192,000 / 19,200,200 = 10 ms)
 - there is no reload register in the ARM generic timer architecture, so you will have to manually rearm the timer by setting the correct number of ticks per period into the `CNTHP_TVAL` register and enabling the timer again
 
+#### VM Structure
+- HvScheduler
+  -> HvVm vm[]
+       -> HvVmRegion regions[]
+       -> HvStage2 stage2
+            -> L1/L2/L3 stage-2 page tables
+  -> HvVcpu vcpus[]
+       -> HvVm *vm
+       -> HvVcpuContext

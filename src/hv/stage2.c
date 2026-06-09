@@ -5,7 +5,9 @@
 #include "hv/vm.h"
 #include "hyp-regs.h"
 
-static HvStage2Desc stage2_table_pool[HV_STAGE2_MAX_TABLE_PAGES][HV_STAGE2_DESCS_PER_TABLE]
+static HvStage2Desc stage2_table_pools[HV_MAX_VMS]
+                                      [HV_STAGE2_MAX_TABLE_PAGES]
+                                      [HV_STAGE2_DESCS_PER_TABLE]
     __attribute__((aligned(HV_STAGE2_PAGE_SIZE)));
 
 // get index of long-descriptor in page table
@@ -32,19 +34,6 @@ static int stage2_range_end(uint64_t base, uint64_t size, uint64_t *end) {
 }
 
 // Helper function to check if a particular mapping is contained within a region
-static int stage2_region_contains_mapping(
-    uint64_t region_base, 
-    uint64_t region_size, 
-    uint64_t map_base, 
-    uint64_t map_size) {
-
-    if (map_size == 0 || map_base < region_base || map_size > region_size) {
-        return 0;
-    }
-    // same as (map_base + map_size) <= (region_base + region_size), avoids overflow
-    return (map_base - region_base) <= (region_size - map_size);
-}
-
 static void stage2_zero_table(HvStage2Desc *table) {
     for (uint32_t i = 0; i < HV_STAGE2_DESCS_PER_TABLE; i++) {
         table[i] = HV_STAGE2_DESC_INVALID;
@@ -130,20 +119,39 @@ static HvStage2Desc *stage2_walk_l3(HvStage2 *stage2, HvIpa ipa, int alloc) {
     return &l3[stage2_page_index(ipa, HV_STAGE2_L3_SHIFT)];
 }
 
+static int stage2_region_contains_mapping(
+    const HvVmRegion *region,
+    HvIpa ipa,
+    HvPa pa,
+    uint64_t size) {
+
+    if (region == 0 ||
+        region->type != HV_VM_REGION_RAM ||
+        size == 0 ||
+        ipa < region->ipa_base ||
+        size > region->size ||
+        (ipa - region->ipa_base) > (region->size - size)) {
+        return 0;
+    }
+
+    uint64_t offset = ipa - region->ipa_base;
+    return pa == region->pa_base + offset;
+}
+
 int hv_stage2_init(HvVm *vm) {
-    if (vm == 0) {
+    if (vm == 0 || vm->id >= HV_MAX_VMS) {
         return HV_STAGE2_ERR_INVAL;
     }
 
     HvStage2 *stage2 = &vm->stage2;
-    stage2->pool_va = &stage2_table_pool[0][0];
+    stage2->pool_va = &stage2_table_pools[vm->id][0][0];
     stage2->pool_pa = (HvPa)(uintptr_t)stage2->pool_va;
     stage2->pool_pages = HV_STAGE2_MAX_TABLE_PAGES;
     stage2->pool_used = 1;
     stage2->root_va = stage2_table_at(stage2, 0);
     stage2->root_pa = stage2_table_pa(stage2, 0);
 
-    for (uint32_t i = 0; i < HV_STAGE2_MAX_TABLE_PAGES; i++) {
+    for (uint32_t i = 0; i < stage2->pool_pages; i++) {
         stage2_zero_table(stage2_table_at(stage2, i));
     }
 
@@ -188,8 +196,8 @@ int hv_stage2_map_region(HvVm *vm, HvIpa ipa, HvPa pa, uint64_t size, uint64_t a
         return HV_STAGE2_ERR_RANGE;
     }
 
-    if (!stage2_region_contains_mapping(vm->ipa_base, vm->ipa_size, ipa, size) ||
-        !stage2_region_contains_mapping(vm->pa_base, vm->pa_size, pa, size)) {
+    const HvVmRegion *region = hv_vm_find_region(vm, ipa);
+    if (!stage2_region_contains_mapping(region, ipa, pa, size)) {
         return HV_STAGE2_ERR_RANGE;
     }
 
@@ -215,7 +223,10 @@ int hv_stage2_unmap_page(HvVm *vm, HvIpa ipa) {
         return HV_STAGE2_ERR_INVAL;
     }
 
-    if (!stage2_region_contains_mapping(vm->ipa_base, vm->ipa_size, ipa, HV_STAGE2_PAGE_SIZE)) {
+    const HvVmRegion *region = hv_vm_find_region(vm, ipa);
+    if (region == 0 ||
+        ipa < region->ipa_base ||
+        (ipa - region->ipa_base) > (region->size - HV_STAGE2_PAGE_SIZE)) {
         return HV_STAGE2_ERR_RANGE;
     }
     // find entry in the page table that corresponds to the given IPA, invalidate it
@@ -227,5 +238,22 @@ int hv_stage2_unmap_page(HvVm *vm, HvIpa ipa) {
     hyp_invalidate_stage2_tlb_ipa(ipa);
     DSB();
     ISB();
+    return HV_STAGE2_OK;
+}
+
+// utility function to convert IPA to PA. 
+// does full stage-2 translation walk to find PA and validates it.
+int hv_stage2_translate(HvVm *vm, HvIpa ipa, HvPa *pa_out) {
+    if (vm == 0 || pa_out == 0 || !stage2_fits_v1_32bit(ipa)) {
+        return HV_STAGE2_ERR_INVAL;
+    }
+
+    HvStage2Desc *entry = stage2_walk_l3(&vm->stage2, ipa, 0);
+    if (entry == 0 || (*entry & HV_STAGE2_DESC_PAGE) != HV_STAGE2_DESC_PAGE) {
+        return HV_STAGE2_ERR_UNMAPPED;
+    }
+
+    *pa_out = (*entry & HV_STAGE2_DESC_ADDR_MASK) |
+              (ipa & (HV_STAGE2_PAGE_SIZE - 1u));
     return HV_STAGE2_OK;
 }

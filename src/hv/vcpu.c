@@ -120,11 +120,13 @@ void hv_vcpu_save(HvVcpu *vcpu, HypExceptState *hyp_state) {
     copy_hyp_state(&vcpu->context.hyp_state, hyp_state);
     hyp_save_banked_regs(&vcpu->context.banked_regs);
     vcpu->context.vbar = read_vbar();
+    vcpu->context.sys_regs.vbar = vcpu->context.vbar;
 }
 
 // on load, load banked registers and hyp state
 void hv_vcpu_load(HvVcpu *vcpu, HypExceptState *hyp_state) {
     hyp_load_banked_regs(&vcpu->context.banked_regs);
-    write_vbar(vcpu->context.vbar);
+    vcpu->context.vbar = vcpu->context.sys_regs.vbar;
+    write_vbar(vcpu->context.sys_regs.vbar);
     copy_hyp_state(hyp_state, &vcpu->context.hyp_state);
 }

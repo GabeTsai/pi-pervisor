@@ -58,7 +58,7 @@ static void init_guest_vcpus(void) {
 
         hv_vcpu_init(vcpu,
                      image->id,
-                     image->load_base,
+                     GUEST_BASE,
                      0,
                      HYP_LOWER_SVC_CPSR);
         hv_vcpu_timer_start_periodic(vcpu, now, period);

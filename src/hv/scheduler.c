@@ -2,6 +2,7 @@
 #include "check.h"
 #include "hv/guest-image.h"
 #include "hv/hypercall.h"
+#include "hv/mmio.h"
 #include "hv/mmu.h"
 #include "hv/virq.h"
 #include "hyp-enter-lower.h"
@@ -9,8 +10,8 @@
 #include "panic.h"
 #include "timer.h"
 
-HvScheduler scheduler;
-bool hv_scheduler_verbose;
+HvScheduler scheduler = {0};
+bool hv_scheduler_verbose = false;
 
 extern void hv_idle_vcpu_entry(void);
 
@@ -67,6 +68,17 @@ void hv_scheduler_init(HvScheduler *scheduler) {
         };
         vm_res = hv_vm_add_region(&scheduler->vm[i], &guard_region);
         assert(vm_res == HV_VM_OK, "failed to add guest guard region");
+
+        HvVmRegion uart_region = {
+            .ipa_base = HV_GUEST_UART_BASE,
+            .size = HV_GUEST_UART_SIZE,
+            .pa_base = 0,
+            .attrs = 0,
+            .type = HV_VM_REGION_MMIO,
+            .device = HV_VM_MMIO_DEVICE_VUART,
+        };
+        vm_res = hv_vm_add_region(&scheduler->vm[i], &uart_region);
+        assert(vm_res == HV_VM_OK, "failed to add guest UART MMIO region");
 
         vm_res = hv_vm_build_stage2(&scheduler->vm[i]);
         assert(vm_res == HV_VM_OK, "failed to build guest stage-2 tables");

@@ -1,0 +1,22 @@
+#pragma once
+
+#include "hv/stage2.h"
+
+#define HV_GUEST_MMIO_BASE      0x10000000u
+#define HV_GUEST_UART_BASE      (HV_GUEST_MMIO_BASE + 0x0000u)
+#define HV_GUEST_UART_SIZE      HV_STAGE2_PAGE_SIZE
+
+enum {
+    HV_GUEST_AUX_ENABLES        = 0x04,
+    HV_GUEST_AUX_MU_IO_REG      = 0x40,
+    HV_GUEST_AUX_MU_IER_REG     = 0x44,
+    HV_GUEST_AUX_MU_IIR_REG     = 0x48,
+    HV_GUEST_AUX_MU_LCR_REG     = 0x4C,
+    HV_GUEST_AUX_MU_MCR_REG     = 0x50,
+    HV_GUEST_AUX_MU_LSR_REG     = 0x54,
+    HV_GUEST_AUX_MU_MSR_REG     = 0x58,
+    HV_GUEST_AUX_MU_SCRATCH     = 0x5C,
+    HV_GUEST_AUX_MU_CNTL_REG    = 0x60,
+    HV_GUEST_AUX_MU_STAT_REG    = 0x64,
+    HV_GUEST_AUX_MU_BAUD_REG    = 0x68,
+};

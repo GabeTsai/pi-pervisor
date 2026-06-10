@@ -36,9 +36,12 @@ static int hv_vm_region_valid(const HvVmRegion *region) {
         }
     }
 
+    if (region->type == HV_VM_REGION_MMIO) {
+        return region->device != HV_VM_MMIO_DEVICE_NONE;
+    }
+
     return region->type == HV_VM_REGION_RAM ||
-           region->type == HV_VM_REGION_RAM_GUARD ||
-           region->type == HV_VM_REGION_MMIO;
+           region->type == HV_VM_REGION_RAM_GUARD;
 }
 
 static int hv_vm_region_contains(const HvVmRegion *region, HvIpa ipa) {

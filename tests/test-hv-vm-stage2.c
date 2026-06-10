@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "check.h"
+#include "hv/mmio.h"
 #include "hv/stage2.h"
 #include "hv/vm.h"
 #include "panic.h"
@@ -18,7 +19,7 @@
 #define TEST_PA_BASE  0x800000u
 #define TEST_RAM_SIZE (3u * HV_STAGE2_PAGE_SIZE)
 #define TEST_GUARD_IPA (TEST_IPA_BASE + TEST_RAM_SIZE)
-#define TEST_MMIO_IPA 0x3f200000u
+#define TEST_MMIO_IPA HV_GUEST_UART_BASE
 
 static HvVm vm;
 
@@ -69,6 +70,7 @@ void main(void) {
         .pa_base = 0,
         .attrs = 0,
         .type = HV_VM_REGION_MMIO,
+        .device = HV_VM_MMIO_DEVICE_VUART,
     };
     assert(hv_vm_add_region(&vm, &mmio) == HV_VM_OK, "add MMIO failed");
     // should be able to find mapped regions, but not unmapped ones

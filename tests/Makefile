@@ -29,7 +29,9 @@ TESTS := \
 	test-guest-sched-yield \
 	test-guest-sched-timer \
 	test-guest-stage2-fault \
+	test-guest-mmio-uart \
 	test-hv-vm-stage2 \
+	test-hv-mmio \
 
 ifeq ($(PROG_FROM_CLI),command line)
 ACTIVE_TESTS := $(PROG)
@@ -66,7 +68,9 @@ REPO_C_SRCS := \
 	$(ROOT)/src/hv/mmio.c \
 	$(ROOT)/src/hv/mmu.c \
 	$(ROOT)/src/hv/stage2.c \
+	$(ROOT)/src/hv/virtual-device.c \
 	$(ROOT)/src/hv/vcpu.c \
+	$(ROOT)/src/hv/vuart.c \
 	$(ROOT)/src/hv/virq.c \
 	$(ROOT)/src/hv/vm.c
 REPO_S_SRCS := \
@@ -156,6 +160,9 @@ TEST_EXTRA_OBJS_test-guest-sched-timer := \
 TEST_EXTRA_OBJS_test-guest-stage2-fault := \
 	build/tests/test-guest-stage2-fault/test/test-guest-stage2-fault.S.o
 
+TEST_EXTRA_OBJS_test-guest-mmio-uart := \
+	build/tests/test-guest-mmio-uart/test/test-guest-mmio-uart.S.o
+
 $(foreach test,$(ACTIVE_TESTS),$(eval $(call TEST_RULES,$(test))))
 
 build/tests/test-hyp-enter-lower/test/test-hyp-enter-lower.S.o: test-hyp-enter-lower.S
@@ -190,6 +197,10 @@ build/tests/test-guest-stage2-fault/test/test-guest-stage2-fault.S.o: test-guest
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
+build/tests/test-guest-mmio-uart/test/test-guest-mmio-uart.S.o: test-guest-mmio-uart.S $(ROOT)/guests/guest-mmio-uart0.bin $(ROOT)/guests/guest-mmio-uart1.bin
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
 $(ROOT)/guests/guest.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
@@ -210,6 +221,12 @@ $(ROOT)/guests/guest-timer1.bin: FORCE
 
 $(ROOT)/guests/guest-stage2-fault.bin: FORCE
 	$(MAKE) -C $(ROOT)/guests guest-stage2-fault.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-mmio-uart0.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-mmio-uart0.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
+
+$(ROOT)/guests/guest-mmio-uart1.bin: FORCE
+	$(MAKE) -C $(ROOT)/guests guest-mmio-uart1.bin ARMGNU=$(ARMGNU) ARMCPU=$(ARMCPU)
 
 $(REPO_BUILD_DIR)/%.o: $(ROOT)/%.c
 	@mkdir -p $(@D)

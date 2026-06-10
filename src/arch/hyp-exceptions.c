@@ -243,6 +243,10 @@ static void decode_stage2_fault(HvVcpu *vcpu,
 }
 
 static void log_stage2_fault(const HvStage2FaultInfo *fault, const char *route) {
+    if (!hyp_except_verbose) {
+        return;
+    }
+
     trace("stage2 fault: route=%s vcpu=%d vm=%d ipa=%p access=%s level=%d status=%p iss=%p\n",
           route,
           fault->vcpu_id,
@@ -313,7 +317,7 @@ HypExceptAction handle_guest_abort(HypExceptState *hyp_state) {
 
     if (region->type == HV_VM_REGION_MMIO) {
         log_stage2_fault(&fault, "mmio");
-        if (hv_mmio_handle_fault(vcpu, &fault) == HV_MMIO_OK) {
+        if (hv_mmio_handle_fault(vcpu, hyp_state, &fault) == HV_MMIO_OK) {
             advance_trapped_guest_instr(hyp_state);
             return HYP_ACTION_RETURN;
         }

@@ -34,9 +34,17 @@ SECTIONS
         __bss_start__ = .;
         *(.bss*) 
         *(COMMON)
-        . = ALIGN(8);
-        __bss_end__ = .;
+        . = ALIGN(0x1000);
     }
+
+    .stage2_tables (NOLOAD) : {
+        *(.stage2_tables)
+        . = ALIGN(8);
+    }
+
+    __bss_end__ = .;
+
+    ASSERT(__bss_end__ <= 0x20000, "hypervisor image overlaps guest base")
 
     /* discard debug info so the .lists are smaller */
     /DISCARD/ : { *(.debug*) }

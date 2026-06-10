@@ -12,11 +12,20 @@
 #define HSR_ISS_SHIFT 0
 #define HSR_ISS_MASK  0x01ffffff
 #define HSR_ISS(hsr)  (((hsr) >> HSR_ISS_SHIFT) & HSR_ISS_MASK)
+
+// all the bits for the ISS field for data/prefetch abort
 // ISS for data/prefetch abort contains fault status code in lower 6 bits 
 #define HSR_ISS_FAULT_STATUS_MASK 0x3f 
 #define HSR_ISS_ABORT_WNR         (1u << 6)
+// Indicates whether stage 2 fault was on access made for stage 1 page table walk
 #define HSR_ISS_ABORT_S1PTW       (1u << 7)
 #define HSR_ISS_ABORT_FNV         (1u << 10)
+// Syndrom Register Transfer field of ISS - which guest register was involved in trapped abort
+#define HSR_ISS_ABORT_SRT_SHIFT   16u
+#define HSR_ISS_ABORT_SRT_MASK    0x1fu
+#define HSR_ISS_ABORT_SSE         (1u << 21)
+#define HSR_ISS_ABORT_SAS_SHIFT   22u
+#define HSR_ISS_ABORT_SAS_MASK    0x3u
 #define HSR_ISS_ABORT_ISV         (1u << 24)
 
 #define HYP_BANKED_SP_USR    0

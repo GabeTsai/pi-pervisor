@@ -19,12 +19,18 @@ typedef enum {
     HV_VM_REGION_MMIO, // known guest device/MMIO IPA range. should fault into MMIO dispatcher
 } HvVmRegionType;
 
+typedef enum {
+    HV_VM_MMIO_DEVICE_NONE,
+    HV_VM_MMIO_DEVICE_VUART,
+} HvVmMmioDevice;
+
 typedef struct {
     HvIpa ipa_base;
     uint64_t size;
     HvPa pa_base;
     uint64_t attrs;
     HvVmRegionType type;
+    HvVmMmioDevice device;
 } HvVmRegion;
 
 // Hyp Virtual Memory Space. Responsible for the guest address-space and policy

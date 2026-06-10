@@ -1,25 +1,28 @@
-#include <stddef.h>
 #include <stdint.h>
+
 #include "aarch32.h"
+#include "generic_timer.h"
 #include "guest-image.h"
 #include "hyp-enter-lower.h"
 #include "hyp-regs.h"
 #include "hv/scheduler.h"
 #include "hv/vcpu.h"
+#include "hv/virq.h"
 #include "panic.h"
+#include "timer.h"
 #include "uart.h"
 
-extern uint8_t guest_sched0_image_start[];
-extern uint8_t guest_sched0_image_end[];
-extern uint8_t guest_sched1_image_start[];
-extern uint8_t guest_sched1_image_end[];
+extern uint8_t guest_mmio_uart0_image_start[];
+extern uint8_t guest_mmio_uart0_image_end[];
+extern uint8_t guest_mmio_uart1_image_start[];
+extern uint8_t guest_mmio_uart1_image_end[];
 
 static const GuestImage guest_images[] = {
-    { 0, GUEST_SLOT_BASE(0), guest_sched0_image_start, guest_sched0_image_end },
-    { 1, GUEST_SLOT_BASE(1), guest_sched1_image_start, guest_sched1_image_end },
+    { 0, GUEST_SLOT_BASE(0), guest_mmio_uart0_image_start, guest_mmio_uart0_image_end },
+    { 1, GUEST_SLOT_BASE(1), guest_mmio_uart1_image_start, guest_mmio_uart1_image_end },
 };
 
-static void load_guest_images(void) {
+static void load_guest_image(void) {
     for (uint32_t i = 0; i < sizeof(guest_images) / sizeof(guest_images[0]); i++) {
         const GuestImage *image = &guest_images[i];
         uint32_t image_size = (uint32_t)(image->image_end - image->image_start);
@@ -62,10 +65,19 @@ static void init_guest_vcpus(void) {
 void main(void) {
     UART_Init();
 
-    load_guest_images();
+    load_guest_image();
 
-    hv_scheduler_init(&scheduler);
     hv_scheduler_verbose = false;
+    hv_scheduler_init(&scheduler);
+    hv_virq_init(&virq_controller);
+
+    TIM_Clear_Pending();
+
+    GEN_TIM_init(100);
+    GEN_TIM_enable();
+
+    hyp_enable_irq_routing();
+
     init_guest_vcpus();
 
     hv_vcpu_enter_initial(&scheduler.vcpus[0]);

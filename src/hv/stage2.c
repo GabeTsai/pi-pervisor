@@ -8,7 +8,7 @@
 static HvStage2Desc stage2_table_pools[HV_MAX_VMS]
                                       [HV_STAGE2_MAX_TABLE_PAGES]
                                       [HV_STAGE2_DESCS_PER_TABLE]
-    __attribute__((aligned(HV_STAGE2_PAGE_SIZE)));
+    __attribute__((aligned(HV_STAGE2_PAGE_SIZE), section(".stage2_tables")));
 
 // get index of long-descriptor in page table
 static uint32_t stage2_page_index(HvIpa ipa, uint32_t shift) {

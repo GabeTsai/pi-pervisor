@@ -62,6 +62,7 @@ static void disable_local_cnthp_irq(void) {
     DSB();
 }
 
+// hz here is frequency of interrupts 
 void GEN_TIM_init(uint32_t hz) {
     uint32_t cntfrq;
 

@@ -529,12 +529,14 @@ After a vCPU is running and takes an exception/trap into Hyp:
 - I did a pretty simple round robin scheduler, using the ARM generic timer tick rate as the time slice
 - Idle dummy vCPU that Hyp `eret`s to when there are no runnable guest vCPUs. The dummy vCPU runs a `wfi` loop, parking the CPU until a physical interrupt wakes it and traps back into Hyp.
   - Otherwise, would have a separate "idle case" execution path where the scheduler stays in Hyp and guest in wfi loop, rather than choosing a vCPU and the vCPU just wfis there
-- Each guest owns a virtual timer that is based off of the BCM timer. General flow of execution is like this: 
-  1. BCM ARM timer fires physically.
+- Each guest owns a virtual timer (`HvVcpuTimer`), but there is only *one* physical BCM ARM timer. Hyp multiplexes it across all guest virtual timers by always arming it as a one-shot for the **earliest deadline**: scan every non-idle/non-exited vCPU with an enabled timer, take the minimum `deadline`, and program the BCM timer to fire `earliest - now` from now (`hv_vtimer_rearm_physical()`). Since no virtual timer can expire before the earliest one, a single physical timer is enough to wake Hyp exactly when the next virtual timer is due. If no guest timer is enabled, the timer IRQ is disabled entirely. (The delta is clamped to `TIM_ARM_TIMER_MAX_DELTA_US`, so for far-out deadlines the timer may fire early - that's harmless, since Hyp only delivers timers that have actually expired and just rearms for the remainder.)
+- General flow of execution is like this:
+  1. BCM ARM timer fires physically (armed earlier for the then-earliest deadline).
   2. The IRQ is intercepted by Hyp, Hyp also checks if the IRQ is valid
-  3. Hyp reads BCM system timer time in ticks
-  4. Hyp checks the "deadlines," or the future time when that vCPU's virtual timer should fire.
-  5. Hyp raises VIRQ_TIMER into a selected guest whose deadline time is greater than or equal to current time.
+  3. Hyp reads the current time in ticks from the free-running BCM *system* timer counter (the ARM timer generates the IRQ; the system timer is the clock that deadlines are compared against)
+  4. Hyp scans all vCPU virtual timers and raises VIRQ_TIMER into every guest whose deadline has expired, i.e. `now >= deadline` (periodic timers then get their deadline advanced by one period)
+  5. Hyp rearms the physical BCM timer for the new earliest deadline among the remaining enabled virtual timers, closing the loop.
+- The same rearm happens any time deadlines change outside the IRQ path - e.g. `HYPERCALL_TIMER_DELAY_TICKS` setting a new deadline, or a guest exiting (its timer is disabled first so a stale expired deadline can't cause an immediate re-fire/rearm loop).
 
 #### ARM Generic Timer
 - [https://www.raspberrypi.com/documentation/computers/processors.html](https://www.raspberrypi.com/documentation/computers/processors.html)
@@ -559,3 +561,15 @@ says to use the BCM2836 Arm-local peripherals for ARM peripherals, including the
   -> HvVcpu vcpus[]
        -> HvVm *vm
        -> HvVcpuContext
+- Virtual Devices
+  - With Virtual UART as an example:
+    - Hyp exposes fake device registers that are actually IPAs. 
+    - Guest writes to the fake UART register, which traps to EL2
+    - EL2 decides if this is allowed, and if so, performs the actual real UART action
+    - guest resumes execution 
+      
+### Future Work
+- Stage 1 Page Table translation
+- Heap allocator/memcheck system
+- Better code infra around virtual devices - HvVm could own a devices array or something similar
+- DCache/ICache

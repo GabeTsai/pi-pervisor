@@ -2,7 +2,7 @@
 #include "hyp-regs.h"
 #include "hv/virq-abi.h"
 
-HvVirqController virq_controller;
+HvVirqController virq_controller = {0};
 
 static inline int validate(HvVcpu *vcpu, VIRQ_Source virq_source) { 
     if (vcpu == 0) {

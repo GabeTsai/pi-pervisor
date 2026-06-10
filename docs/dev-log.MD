@@ -158,7 +158,14 @@
             - scheduler switches prev=1 -> next=idle
     - Added much more detailed stage-2 guest abort fault decoding
     - Changed VM to work in units of regions, VM region types (known ram, guard, mmio)
-    - Added test `test-hv-vm-stage2.c` that tests various VM region/stage2 functionality
+    - Added skeletal mmio fault implementation (unhandled for now)
+    - Added test `test-hv-vm-stage2.c` that tests various VM region/stage2 functionality 
+    - Expanded mmio functionality to add basic MMIO fault handling
+        - Bunch of utility functions to decode ISS bits of HSR upon data abort/fault and properly handle mmio reads/writes
+        - Added virtual UART IPAs/virtual UART device functionality to support device isolation for guests, added example test `test-guest-mmio-uart` that shows how a guest might go about creating their own UART library from the virtual UART driver and do prints
+            - the test has both guests print and then sleep via the timer delay
+    - Also patched other guest scheduling/yielding
+
 
 
 

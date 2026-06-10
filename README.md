@@ -1,4 +1,5 @@
 # pi-pervisor
+Final Project for Stanford's CS240LX 2026 Spring Class:
 
 - Bare-metal AArch32 hypervisor for the Raspberry Pi Zero 2 W / Cortex-A53, linked as a `kernel.img` at `0x8000`.
 - Early boot, exception vectors, Hyp-mode entry/return, banked register handling, and lower-privilege guest entry support.

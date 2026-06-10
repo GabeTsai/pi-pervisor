@@ -1,8 +1,7 @@
-# pi-pervisor System Design Diagrams
+# Pi-Pervisor
 
-ASCII diagrams on the design of pi-pervisor: a bare-metal
-AArch32 hypervisor for the Raspberry Pi Zero 2 W.
-<img src = "ARMv8SecurityModel.png" alt = "Figure G1-1 ARMv8-A - Security model when EL3 is using AArch32" style = "width:1200px;"/>
+Design of pi-pervisor: a bare-metal AArch32 hypervisor for the Raspberry Pi Zero 2 W.
+
 ## 1. Hypercall / Hyp-Exception Infrastructure
 
 ```text
@@ -96,19 +95,16 @@ AArch32 hypervisor for the Raspberry Pi Zero 2 W.
 ```
 
 ### CONTEXT SWITCH (hv_scheduler_switch_to):
-   1. `hv_vcpu_save(prev)` — stash prev's state: exception frame (regs, ELR, SPSR),
-      banked SP/LR/SPSR, guest VBAR
 
-   2. `hv_mmu_activate_vcpu(next)` — switch address space: point VTTBR at next VM's
-      stage-2 tables + VMID (VMID-tagged TLB entries, so no flush)
-
-   3. `hv_vcpu_load(next)` — restore next's state: banked regs, guest VBAR, and copy
-      its saved exception frame onto the Hyp stack
-
-   4. `hv_virq_sync(next)` — set/clear HCR.VI so next sees its own pending vIRQs
+1. `hv_vcpu_save(prev)` — stash prev's state: exception frame (regs, ELR, SPSR),
+banked SP/LR/SPSR, guest VBAR
+2. `hv_mmu_activate_vcpu(next)` — switch address space: point VTTBR at next VM's
+stage-2 tables + VMID (VMID-tagged TLB entries, so no flush)
+3. `hv_vcpu_load(next)` — restore next's state: banked regs, guest VBAR, and copy
+its saved exception frame onto the Hyp stack
+4. `hv_virq_sync(next)` — set/clear HCR.VI so next sees its own pending vIRQs
 
    ...then the normal exception-exit path erets into the *new* guest.
-
 
 ## 3. vCPU Scheduling and IRQ Handling
 
@@ -152,8 +148,6 @@ AArch32 hypervisor for the Raspberry Pi Zero 2 W.
    hv_vcpu_load(next, frame)        │  hvc VIRQ_COMPLETE ► clear  │
                                     └─────────────────────────────┘
 ```
-
-
 
 ## 4. VM Hierarchy and Stage-2 Translation
 
@@ -215,11 +209,6 @@ AArch32 hypervisor for the Raspberry Pi Zero 2 W.
                                                (diagram 5)
 ```
 
-
-
-
-
-
 ## 5. Virtual Devices and MMIO Emulation
 
 ```text
@@ -257,7 +246,4 @@ AArch32 hypervisor for the Raspberry Pi Zero 2 W.
            ▼
         eret ──► guest continues, unaware it never touched hardware
 ```
-
-
-
 

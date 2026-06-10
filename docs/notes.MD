@@ -568,8 +568,36 @@ says to use the BCM2836 Arm-local peripherals for ARM peripherals, including the
     - EL2 decides if this is allowed, and if so, performs the actual real UART action
     - guest resumes execution 
       
-### Future Work
+### Future Work/Cleanup
 - Stage 1 Page Table translation
+  - Separate guest VA->IPA policy from EL2 IPA->PA stage-2 policy
+  - Add small tests for translation table descriptor construction before wiring it into guest boot
 - Heap allocator/memcheck system
-- Better code infra around virtual devices - HvVm could own a devices array or something similar
+  - Replace fixed global/static allocation paths where they block more VMs, vCPUs, or device instances
+  - Track allocator ownership, alignment, and bounds so early memory bugs fail loudly
+- Better code infra around virtual devices
+  - Let `HvVm` own a device table instead of encoding device behavior only through memory-region metadata
+  - Give each virtual device a common ops interface for init, MMIO access, reset, and interrupt injection
+  - Keep the MMIO dispatcher generic so adding virtual GPIO, timer, or block devices does not require new central-case logic
+- VM/vCPU lifecycle cleanup
+  - Define explicit init, reset, run, block, and teardown paths for VMs and vCPUs
+  - Keep per-vCPU state separate from per-VM address-space and device state
+  - Avoid assuming one guest per physical core; preserve a scheduler model that can map many vCPUs onto available cores
+- Error handling and diagnostics
+  - Standardize return codes across HV modules and make fault paths print enough ESR/FAR/IPA context for debugging
+  - Add lightweight assertions for impossible hypervisor states while keeping guest-caused faults recoverable
+- Host-side tests and build hygiene
+  - Expand unit tests for pure C logic such as region overlap checks, MMIO dispatch, scheduler queues, and hypercall decoding
+  - Make `make`, `make clean`, and `make test` the documented entry points for the hypervisor, guest images, and host checks
+  - Split hardware smoke tests from host tests so class-project demos and future regression checks are easy to rerun
+- Header/module boundaries
+  - Keep public headers focused on module contracts and move private helpers into `.c` files or internal headers
+  - Document which code is ARMv7/AArch32-specific so future AArch64 or board-specific work stays isolated
 - DCache/ICache
+  - Add explicit cache maintenance helpers before enabling cached mappings
+  - Audit barriers around MMIO, exception return, page-table updates, and self-modifying/vector code
+- Multi-core:
+  - Cache coherency
+  - Per-core scheduler state and boot sequencing for secondary cores
+  - Cross-core interrupt routing and vCPU migration rules
+  - Locking strategy for shared VM/device/scheduler state
